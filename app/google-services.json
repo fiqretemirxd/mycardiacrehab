@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "967834379573",
+    "project_id": "mycardiacrehab-7dc64",
+    "storage_bucket": "mycardiacrehab-7dc64.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:967834379573:android:d9522e449259444cea587c",
+        "android_client_info": {
+          "package_name": "com.example.mycardiacrehab"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCWZ8zfN29F1Y445OlN0keLFZoHkdlbNR4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
