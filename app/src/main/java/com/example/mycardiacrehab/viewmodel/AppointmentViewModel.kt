@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.util.Date
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.ListenerRegistration
 
 class AppointmentViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
@@ -22,10 +23,19 @@ class AppointmentViewModel : ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
+    // 2. ADD THIS VARIABLE
+    // This will hold a reference to the currently active listener
+    private var currentListener: ListenerRegistration? = null
+
     fun loadAppointments(userId: String, category: String) {
         if (userId.isBlank()) return
 
         _isLoading.value = true
+
+        // 3. ADD THIS LINE
+        // Cancel any previous listener before attaching a new one.
+        // This is the main fix that stops the race condition.
+        currentListener?.remove()
 
         viewModelScope.launch {
             // Get the current date once
@@ -57,7 +67,9 @@ class AppointmentViewModel : ViewModel() {
                 }
             }
 
-            query.addSnapshotListener { snapshot, e ->
+            // 4. MODIFY THIS LINE
+            // Store the new listener in our variable
+            currentListener = query.addSnapshotListener { snapshot, e ->
                 if (e != null) {
                     _appointments.value = emptyList()
                     _isLoading.value = false
@@ -80,6 +92,13 @@ class AppointmentViewModel : ViewModel() {
                 _isLoading.value = false
             }
         }
+    }
+
+    // 5. ADD THIS FUNCTION (Good Practice)
+    // This ensures the listener is removed if the ViewModel is destroyed.
+    override fun onCleared() {
+        currentListener?.remove()
+        super.onCleared()
     }
 
     fun createAppointment(
@@ -124,4 +143,3 @@ class AppointmentViewModel : ViewModel() {
             .update("status", "cancelled")
     }
 }
-

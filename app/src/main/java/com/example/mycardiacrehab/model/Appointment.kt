@@ -14,7 +14,8 @@ data class Appointment(
     val appointmentDateTime: Timestamp = Timestamp.now(),
     val mode: String = "virtual",
     val status: String = "scheduled",
-    val notes: String? = null
+    val notes: String? = null,
+    val summary: String? = null
 ) {
 
 
