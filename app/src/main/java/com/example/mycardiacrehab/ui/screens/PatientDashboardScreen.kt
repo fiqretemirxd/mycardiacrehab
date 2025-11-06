@@ -18,7 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.compose.viewModel // Make sure this is imported
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -45,6 +45,17 @@ fun PatientDashboardScreen(
     val userEmail = (authState as? AuthViewModel.AuthState.Authenticated)?.email ?: "User"
     val userId = (authState as? AuthViewModel.AuthState.Authenticated)?.userId ?: "N/A"
     val navController = rememberNavController()
+
+    // -----------------  START: THE FIX -----------------
+
+    // 1. CREATE ALL VIEW MODELS HERE (THE PARENT)
+    // This ensures there is only ONE instance of each.
+    val appointmentViewModel: AppointmentViewModel = viewModel()
+    val medicationViewModel: MedicationViewModel = viewModel()
+    val progressViewModel: ProgressViewModel = viewModel()
+
+    // -----------------  END: THE FIX -----------------
+
 
     val primaryTeal = Color(0xFF00695C)
 
@@ -111,17 +122,39 @@ fun PatientDashboardScreen(
                 PatientHomeScreen(
                     userId = userId,
                     userEmail = userEmail,
-                    navController = navController
+                    navController = navController,
+                    // 2. PASS THE SHARED VIEW MODELS DOWN
+                    progressViewModel = progressViewModel,
+                    appointmentViewModel = appointmentViewModel,
+                    medicationViewModel = medicationViewModel
                 )
             }
 
             // --- Secondary Screens (Accessed via MoreScreen) ---
             composable(PatientScreen.Exercise.route) { ExerciseScreen() }
-            composable(PatientScreen.Medication.route) { MedicationScreen() }
+            composable(PatientScreen.Medication.route) {
+                // 3. PASS THE SHARED MEDICATION VIEWMODEL
+                MedicationScreen(
+                    authViewModel = authViewModel,
+                    medicationViewModel = medicationViewModel
+                )
+            }
             composable(PatientScreen.Chatbot.route) { ChatbotScreen() }
             composable(PatientScreen.Journal.route) { JournalScreen() }
-            composable(PatientScreen.Appointments.route) { AppointmentScreen() }
-            composable(PatientScreen.Progress.route) { ProgressScreen() }
+            composable(PatientScreen.Appointments.route) {
+                // 4. PASS THE SHARED AUTH AND APPOINTMENT VIEW MODELS
+                AppointmentScreen(
+                    authViewModel = authViewModel,
+                    appointmentViewModel = appointmentViewModel
+                )
+            }
+            composable(PatientScreen.Progress.route) {
+                // 5. PASS THE SHARED PROGRESS VIEWMODEL
+                ProgressScreen(
+                    authViewModel = authViewModel,
+                    progressViewModel = progressViewModel
+                )
+            }
             composable(PatientScreen.More.route) { MoreScreen(navController = navController) }
         }
     }
@@ -138,9 +171,11 @@ fun PatientHomeScreen(
     userId: String,
     userEmail: String,
     navController: NavHostController,
-    progressViewModel: ProgressViewModel = viewModel(),
-    appointmentViewModel: AppointmentViewModel = viewModel(),
-    medicationViewModel: MedicationViewModel = viewModel()
+    // 6. REMOVE THE DEFAULT = viewModel()
+    // This forces it to use the one passed from the parent.
+    progressViewModel: ProgressViewModel,
+    appointmentViewModel: AppointmentViewModel,
+    medicationViewModel: MedicationViewModel
 ) {
     LaunchedEffect(userId) {
         if (userId != "N/A") {
@@ -216,11 +251,13 @@ fun PatientHomeScreen(
                     }
                 }
             }
-
             if (upcomingAppointments.isNotEmpty()) {
                 Button(
                     onClick = { navController.navigate(PatientScreen.Appointments.route) },
-                    modifier = Modifier.fillMaxWidth().height(50.dp).padding(top = 12.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                        .padding(top = 12.dp)
                 ) {
                     Text("VIEW ALL APPOINTMENTS")
                 }
@@ -230,7 +267,9 @@ fun PatientHomeScreen(
         // --- Quick Access to Chat ---
         item {
             Card(
-                modifier = Modifier.fillMaxWidth().clickable { navController.navigate(PatientScreen.Chatbot.route) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { navController.navigate(PatientScreen.Chatbot.route) },
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
             ) {
                 Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -295,7 +334,9 @@ fun AppointmentSummaryItem(appointment: Appointment) {
             Icon(
                 Icons.Default.CalendarMonth,
                 contentDescription = "Appointment",
-                modifier = Modifier.size(24.dp).padding(end = 8.dp),
+                modifier = Modifier
+                    .size(24.dp)
+                    .padding(end = 8.dp),
                 tint = MaterialTheme.colorScheme.primary
             )
             Column(Modifier.weight(1f)) {
@@ -339,7 +380,9 @@ fun MoreScreen(navController: NavHostController) {
 @Composable
 fun MoreNavigationItem(title: String, icon: ImageVector, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Row(

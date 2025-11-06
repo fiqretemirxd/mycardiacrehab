@@ -24,8 +24,8 @@ import java.util.*
 
 @Composable
 fun AppointmentScreen(
-    authViewModel: AuthViewModel = viewModel(),
-    appointmentViewModel: AppointmentViewModel = viewModel()
+    authViewModel: AuthViewModel,
+    appointmentViewModel: AppointmentViewModel
 ) {
     // Get current user's ID
     val authState = authViewModel.authState.collectAsState().value
