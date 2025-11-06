@@ -15,7 +15,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mycardiacrehab.model.Appointment
 import com.example.mycardiacrehab.viewmodel.AppointmentViewModel
 import com.example.mycardiacrehab.viewmodel.AuthViewModel
@@ -25,7 +24,7 @@ import java.util.*
 @Composable
 fun AppointmentScreen(
     authViewModel: AuthViewModel,
-    appointmentViewModel: AppointmentViewModel
+    appointmentViewModel: AppointmentViewModel // The shared VM
 ) {
     // Get current user's ID
     val authState = authViewModel.authState.collectAsState().value
@@ -37,10 +36,12 @@ fun AppointmentScreen(
     // This effect now re-runs whenever the user ID OR the selected tab index changes
     LaunchedEffect(currentUserId, selectedTabIndex) {
         val category = tabs[selectedTabIndex].lowercase(Locale.ROOT)
-        appointmentViewModel.loadAppointments(currentUserId, category)
+
+        // --- FIX: Call the RENAMED tab-specific function ---
+        appointmentViewModel.loadAppointmentsForTab(currentUserId, category)
     }
 
-    // Observe the single list and the loading state from the ViewModel
+    // --- FIX: This observation is now correct and separate ---
     val currentList by appointmentViewModel.appointments.collectAsState()
     val isLoading by appointmentViewModel.isLoading.collectAsState()
 
@@ -160,7 +161,7 @@ private fun AppointmentCard(appointment: Appointment, viewModel: AppointmentView
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = dateFormatter.format(appointment.appointmentDateTime.toDate()),
                 style = MaterialTheme.typography.bodyLarge

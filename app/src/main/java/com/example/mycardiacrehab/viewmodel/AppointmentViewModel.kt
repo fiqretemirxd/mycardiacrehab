@@ -10,97 +10,108 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.util.Date
 import com.google.firebase.Timestamp
-import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.ListenerRegistration // Ensure this is imported
 
 class AppointmentViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
 
-    // A single list to hold the appointments for the currently selected tab
+    // --- FIX 1: One list for the AppointmentScreen (tabs) ---
     private val _appointments = MutableStateFlow<List<Appointment>>(emptyList())
     val appointments: StateFlow<List<Appointment>> = _appointments
 
-    // A flag to indicate if we are currently loading data
+    // --- FIX 2: A new, separate list for the Dashboard ---
+    private val _dashboardAppointments = MutableStateFlow<List<Appointment>>(emptyList())
+    val dashboardAppointments: StateFlow<List<Appointment>> = _dashboardAppointments
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    // 2. ADD THIS VARIABLE
-    // This will hold a reference to the currently active listener
-    private var currentListener: ListenerRegistration? = null
+    // --- FIX 3: Separate listeners for each screen ---
+    private var tabListener: ListenerRegistration? = null
+    private var dashboardListener: ListenerRegistration? = null
 
-    fun loadAppointments(userId: String, category: String) {
+    // --- NEW FUNCTION: Only for the Dashboard (PatientHomeScreen) ---
+    fun loadAppointmentsForDashboard(userId: String) {
         if (userId.isBlank()) return
+        dashboardListener?.remove() // Remove any old dashboard listener
 
-        _isLoading.value = true
+        val now = Date()
+        val query = db.collection("appointments")
+            .whereEqualTo("patientId", userId)
+            .whereEqualTo("status", "scheduled")
+            .whereGreaterThan("appointmentDateTime", now)
+            .orderBy("appointmentDateTime", Query.Direction.ASCENDING)
 
-        // 3. ADD THIS LINE
-        // Cancel any previous listener before attaching a new one.
-        // This is the main fix that stops the race condition.
-        currentListener?.remove()
-
-        viewModelScope.launch {
-            // Get the current date once
-            val now = Date()
-
-            // Base query for the user's appointments
-            var query: Query = db.collection("appointments")
-                .whereEqualTo("patientId", userId)
-
-            // Modify the query based on the selected category
-            when (category) {
-                "upcoming" -> {
-                    query = query
-                        .whereEqualTo("status", "scheduled")
-                        .whereGreaterThan("appointmentDateTime", now)
-                        .orderBy("appointmentDateTime", Query.Direction.ASCENDING)
-                }
-                "past" -> {
-                    query = query
-                        // We can't use two `whereNotEqualTo` or inequality filters.
-                        // So we query for completed or past scheduled appointments and filter client-side.
-                        // For simplicity here, we'll just get all and then filter.
-                        .orderBy("appointmentDateTime", Query.Direction.DESCENDING)
-                }
-                "cancelled" -> {
-                    query = query
-                        .whereEqualTo("status", "cancelled")
-                        .orderBy("appointmentDateTime", Query.Direction.DESCENDING)
-                }
+        dashboardListener = query.addSnapshotListener { snapshot, e ->
+            if (e != null) {
+                _dashboardAppointments.value = emptyList()
+                return@addSnapshotListener
             }
-
-            // 4. MODIFY THIS LINE
-            // Store the new listener in our variable
-            currentListener = query.addSnapshotListener { snapshot, e ->
-                if (e != null) {
-                    _appointments.value = emptyList()
-                    _isLoading.value = false
-                    return@addSnapshotListener
-                }
-
-                val list = snapshot?.documents?.mapNotNull { doc ->
-                    doc.toObject(Appointment::class.java)?.apply { this.appointmentId = doc.id }
-                } ?: emptyList()
-
-                // Final filtering for complex cases like "past"
-                if (category == "past") {
-                    _appointments.value = list.filter {
-                        it.status == "completed" || (it.status == "scheduled" && it.appointmentDateTime.toDate().before(now))
-                    }
-                } else {
-                    _appointments.value = list
-                }
-
-                _isLoading.value = false
-            }
+            _dashboardAppointments.value = snapshot?.documents?.mapNotNull { doc ->
+                doc.toObject(Appointment::class.java)?.apply { this.appointmentId = doc.id }
+            } ?: emptyList()
         }
     }
 
-    // 5. ADD THIS FUNCTION (Good Practice)
-    // This ensures the listener is removed if the ViewModel is destroyed.
+    // --- RENAMED FUNCTION: Only for the AppointmentScreen ---
+    fun loadAppointmentsForTab(userId: String, category: String) {
+        if (userId.isBlank()) return
+
+        _isLoading.value = true
+        tabListener?.remove() // Remove any old tab listener
+
+        val now = Date()
+        var query: Query = db.collection("appointments")
+            .whereEqualTo("patientId", userId)
+
+        when (category) {
+            "upcoming" -> {
+                query = query
+                    .whereEqualTo("status", "scheduled")
+                    .whereGreaterThan("appointmentDateTime", now)
+                    .orderBy("appointmentDateTime", Query.Direction.ASCENDING)
+            }
+            "past" -> {
+                query = query
+                    .orderBy("appointmentDateTime", Query.Direction.DESCENDING)
+            }
+            "cancelled" -> {
+                query = query
+                    .whereEqualTo("status", "cancelled")
+                    .orderBy("appointmentDateTime", Query.Direction.DESCENDING)
+            }
+        }
+
+        tabListener = query.addSnapshotListener { snapshot, e ->
+            if (e != null) {
+                _appointments.value = emptyList()
+                _isLoading.value = false
+                return@addSnapshotListener
+            }
+
+            val list = snapshot?.documents?.mapNotNull { doc ->
+                doc.toObject(Appointment::class.java)?.apply { this.appointmentId = doc.id }
+            } ?: emptyList()
+
+            if (category == "past") {
+                _appointments.value = list.filter {
+                    it.status == "completed" || (it.status == "scheduled" && it.appointmentDateTime.toDate().before(now))
+                }
+            } else {
+                _appointments.value = list
+            }
+            _isLoading.value = false
+        }
+    }
+
+    // --- FIX 4: Make sure to clear BOTH listeners ---
     override fun onCleared() {
-        currentListener?.remove()
+        tabListener?.remove()
+        dashboardListener?.remove()
         super.onCleared()
     }
 
+    // --- (createAppointment and cancelAppointment functions are fine, no changes) ---
     fun createAppointment(
         patientId: String,
         providerId: String,
@@ -119,8 +130,7 @@ class AppointmentViewModel : ViewModel() {
                 appointmentDateTime = dateTime,
                 status = "scheduled", // New appointments are always "scheduled"
                 mode = mode,
-                notes = notes,
-                //summary = "" // Initially empty
+                notes = notes
             )
 
             // Add the new appointment to the "appointments" collection in Firestore
@@ -137,7 +147,6 @@ class AppointmentViewModel : ViewModel() {
         }
     }
 
-    // This function is still needed for the cancel button action
     fun cancelAppointment(appointmentId: String) {
         db.collection("appointments").document(appointmentId)
             .update("status", "cancelled")

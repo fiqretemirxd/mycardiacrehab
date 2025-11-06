@@ -46,15 +46,11 @@ fun PatientDashboardScreen(
     val userId = (authState as? AuthViewModel.AuthState.Authenticated)?.userId ?: "N/A"
     val navController = rememberNavController()
 
-    // -----------------  START: THE FIX -----------------
-
     // 1. CREATE ALL VIEW MODELS HERE (THE PARENT)
     // This ensures there is only ONE instance of each.
     val appointmentViewModel: AppointmentViewModel = viewModel()
     val medicationViewModel: MedicationViewModel = viewModel()
     val progressViewModel: ProgressViewModel = viewModel()
-
-    // -----------------  END: THE FIX -----------------
 
 
     val primaryTeal = Color(0xFF00695C)
@@ -171,22 +167,26 @@ fun PatientHomeScreen(
     userId: String,
     userEmail: String,
     navController: NavHostController,
-    // 6. REMOVE THE DEFAULT = viewModel()
-    // This forces it to use the one passed from the parent.
     progressViewModel: ProgressViewModel,
-    appointmentViewModel: AppointmentViewModel,
+    appointmentViewModel: AppointmentViewModel, // This is the shared VM
     medicationViewModel: MedicationViewModel
 ) {
     LaunchedEffect(userId) {
         if (userId != "N/A") {
             progressViewModel.loadWeeklyProgress(userId)
-            appointmentViewModel.loadAppointments(userId, "upcoming")
+
+            // --- FIX: Call the NEW dashboard-specific function ---
+            appointmentViewModel.loadAppointmentsForDashboard(userId)
+
             medicationViewModel.loadDailySchedule(userId)
         }
     }
 
     val summary by progressViewModel.weeklySummary.collectAsState()
-    val upcomingAppointments by appointmentViewModel.appointments.collectAsState()
+
+    // --- FIX: Observe the NEW dashboard-specific list ---
+    val upcomingAppointments by appointmentViewModel.dashboardAppointments.collectAsState()
+
     val adherenceRate by medicationViewModel.adherenceRate.collectAsState()
 
     LazyColumn(
@@ -219,7 +219,7 @@ fun PatientHomeScreen(
                 // 1. Exercise Minutes Card
                 DashboardSummaryCard(
                     title = "Exercise Mins",
-                    value = "${summary?.totalExerciseMinutes ?: "--"}",
+                    value = summary?.totalExerciseMinutes?.toString() ?: "--",
                     icon = Icons.AutoMirrored.Filled.DirectionsRun,
                     onClick = { navController.navigate(PatientScreen.Exercise.route) },
                     modifier = Modifier.weight(1f),
@@ -286,6 +286,7 @@ fun PatientHomeScreen(
         }
     }
 }
+
 
 // -------------------------------------------------------------------------------------
 // Helper Functions (Resolves all Unresolved Reference errors)
