@@ -34,6 +34,8 @@ import com.example.mycardiacrehab.viewmodel.MedicationViewModel
 import com.example.mycardiacrehab.viewmodel.ProgressViewModel
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -171,14 +173,25 @@ fun PatientHomeScreen(
     appointmentViewModel: AppointmentViewModel, // This is the shared VM
     medicationViewModel: MedicationViewModel
 ) {
+    var isLoading by remember { mutableStateOf(true) }
+
     LaunchedEffect(userId) {
+        // This effect will run ONLY when the userId becomes stable and is not "N/A"
         if (userId != "N/A") {
-            progressViewModel.loadWeeklyProgress(userId)
+            isLoading = true
 
-            // --- FIX: Call the NEW dashboard-specific function ---
-            appointmentViewModel.loadAppointmentsForDashboard(userId)
+            // Use joinAll to launch all three data fetches concurrently and wait for them to finish
+            joinAll(
+                launch { progressViewModel.loadWeeklyProgress(userId) },
+                launch { appointmentViewModel.loadAppointmentsForDashboard(userId) },
+                launch { medicationViewModel.loadDailySchedule(userId) }
+            )
 
-            medicationViewModel.loadDailySchedule(userId)
+            // Only after all launches complete, set loading to false.
+            isLoading = false
+        } else {
+            // If the user is unauthenticated or loading, show nothing/spinner briefly
+            isLoading = false
         }
     }
 
@@ -189,104 +202,133 @@ fun PatientHomeScreen(
 
     val adherenceRate by medicationViewModel.adherenceRate.collectAsState()
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // --- Greeting ---
-        item {
-            Text(
-                "Hello, ${userEmail.substringBefore("@")}!",
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                "Review your adherence and upcoming tasks.",
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
+    if (isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
         }
+    } else {
 
-        // --- Weekly Progress Summary Cards (Resolves Unresolved reference 'DashboardSummaryCard') ---
-        item {
-            Text("Weekly Progress Snapshot", style = MaterialTheme.typography.titleLarge)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // 1. Exercise Minutes Card
-                DashboardSummaryCard(
-                    title = "Exercise Mins",
-                    value = summary?.totalExerciseMinutes?.toString() ?: "--",
-                    icon = Icons.AutoMirrored.Filled.DirectionsRun,
-                    onClick = { navController.navigate(PatientScreen.Exercise.route) },
-                    modifier = Modifier.weight(1f),
-                    color = MaterialTheme.colorScheme.tertiary
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // --- Greeting ---
+            item {
+                Text(
+                    "Hello, ${userEmail.substringBefore("@")}!",
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.primary
                 )
-
-                // 2. Medication Adherence Card
-                DashboardSummaryCard(
-                    title = "Meds Adherence",
-                    value = if (adherenceRate > 0) "$adherenceRate%" else "--",
-                    icon = Icons.Default.Schedule,
-                    onClick = { navController.navigate(PatientScreen.Medication.route) },
-                    modifier = Modifier.weight(1f),
-                    color = MaterialTheme.colorScheme.secondary
+                Text(
+                    "Review your adherence and upcoming tasks.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(bottom = 16.dp)
                 )
             }
-        }
 
-        // --- Upcoming Appointments List (Resolves Unresolved reference 'AppointmentSummaryItem') ---
-        item {
-            Text("Upcoming Appointments (${upcomingAppointments.size})", style = MaterialTheme.typography.titleLarge)
+            // --- Weekly Progress Summary Cards (Resolves Unresolved reference 'DashboardSummaryCard') ---
+            item {
+                Text("Weekly Progress Snapshot", style = MaterialTheme.typography.titleLarge)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // 1. Exercise Minutes Card
+                    DashboardSummaryCard(
+                        title = "Exercise Mins",
+                        value = summary?.totalExerciseMinutes?.toString() ?: "--",
+                        icon = Icons.AutoMirrored.Filled.DirectionsRun,
+                        onClick = { navController.navigate(PatientScreen.Exercise.route) },
+                        modifier = Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
 
-            if (upcomingAppointments.isEmpty()) {
-                Text("No upcoming appointments.", modifier = Modifier.padding(top = 8.dp), color = Color.Gray)
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    upcomingAppointments.take(3).forEach { appointment ->
-                        AppointmentSummaryItem(appointment)
+                    // 2. Medication Adherence Card
+                    DashboardSummaryCard(
+                        title = "Meds Adherence",
+                        value = if (adherenceRate > 0) "$adherenceRate%" else "--",
+                        icon = Icons.Default.Schedule,
+                        onClick = { navController.navigate(PatientScreen.Medication.route) },
+                        modifier = Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+            }
+
+            // --- Upcoming Appointments List (Resolves Unresolved reference 'AppointmentSummaryItem') ---
+            item {
+                Text(
+                    "Upcoming Appointments (${upcomingAppointments.size})",
+                    style = MaterialTheme.typography.titleLarge
+                )
+
+                if (upcomingAppointments.isEmpty()) {
+                    Text(
+                        "No upcoming appointments.",
+                        modifier = Modifier.padding(top = 8.dp),
+                        color = Color.Gray
+                    )
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        upcomingAppointments.take(3).forEach { appointment ->
+                            AppointmentSummaryItem(appointment)
+                        }
+                    }
+                }
+                if (upcomingAppointments.isNotEmpty()) {
+                    Button(
+                        onClick = { navController.navigate(PatientScreen.Appointments.route) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                            .padding(top = 12.dp)
+                    ) {
+                        Text("VIEW ALL APPOINTMENTS")
                     }
                 }
             }
-            if (upcomingAppointments.isNotEmpty()) {
-                Button(
-                    onClick = { navController.navigate(PatientScreen.Appointments.route) },
+
+            // --- Quick Access to Chat ---
+            item {
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp)
-                        .padding(top = 12.dp)
+                        .clickable { navController.navigate(PatientScreen.Chatbot.route) },
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                 ) {
-                    Text("VIEW ALL APPOINTMENTS")
-                }
-            }
-        }
-
-        // --- Quick Access to Chat ---
-        item {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { navController.navigate(PatientScreen.Chatbot.route) },
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-            ) {
-                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.SmartToy, contentDescription = "Chat", modifier = Modifier.size(32.dp))
-                    Spacer(Modifier.width(16.dp))
-                    Column {
-                        Text("Need Guidance?", style = MaterialTheme.typography.titleMedium)
-                        Text("Ask the AI Chatbot a question.", style = MaterialTheme.typography.bodySmall)
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.SmartToy,
+                            contentDescription = "Chat",
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Spacer(Modifier.width(16.dp))
+                        Column {
+                            Text("Need Guidance?", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "Ask the AI Chatbot a question.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        Spacer(Modifier.weight(1f))
+                        Icon(
+                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "Open Chat"
+                        )
                     }
-                    Spacer(Modifier.weight(1f))
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Open Chat")
                 }
             }
         }
     }
 }
-
 
 // -------------------------------------------------------------------------------------
 // Helper Functions (Resolves all Unresolved Reference errors)
