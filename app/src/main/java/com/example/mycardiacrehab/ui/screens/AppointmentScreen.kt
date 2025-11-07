@@ -35,11 +35,19 @@ fun AppointmentScreen(
     // 1. Get the currentUserId, but make it nullable (don't `?: return`)
     val currentUserId = (authState as? AuthViewModel.AuthState.Authenticated)?.userId
 
+    val loadAppointments = remember<(Int) -> Unit> {
+        { index ->
+            if (currentUserId != null) {
+                val category = tabs[index].lowercase(Locale.ROOT)
+                appointmentViewModel.loadAppointmentsForTab(currentUserId, category)
+            }
+        }
+    }
+
     // 2. Update the LaunchedEffect to ONLY run when currentUserId is not null
-    LaunchedEffect(currentUserId, selectedTabIndex) {
+    LaunchedEffect(currentUserId) {
         if (currentUserId != null) {
-            val category = tabs[selectedTabIndex].lowercase(Locale.ROOT)
-            appointmentViewModel.loadAppointmentsForTab(currentUserId, category) // Use the function from the last fix
+            loadAppointments(selectedTabIndex)
         }
     }
     // --- END OF FIX ---
@@ -59,7 +67,10 @@ fun AppointmentScreen(
             tabs.forEachIndexed { index, title ->
                 Tab(
                     selected = selectedTabIndex == index,
-                    onClick = { selectedTabIndex = index },
+                    onClick = {
+                        selectedTabIndex = index
+                        loadAppointments(index)
+                    },
                     text = { Text(title) }
                 )
             }
