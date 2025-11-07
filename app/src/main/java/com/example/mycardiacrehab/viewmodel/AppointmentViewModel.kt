@@ -39,6 +39,7 @@ class AppointmentViewModel : ViewModel() {
         }
 
         dashboardListener?.remove() // Remove any old dashboard listener
+        _dashboardAppointments.value = emptyList()
 
         val now = Date()
         val query = db.collection("appointments")
@@ -68,6 +69,8 @@ class AppointmentViewModel : ViewModel() {
         }
 
         _isLoading.value = true
+        _appointments.value = emptyList()
+
         tabListener?.remove() // Remove any old tab listener
 
         viewModelScope.launch {
