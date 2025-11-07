@@ -52,7 +52,15 @@ class AuthViewModel : ViewModel() {
     }
 
     private fun fetchUserType(userId: String) = viewModelScope.launch {
-        _authState.value = AuthState.Loading
+
+        // --- THIS IS THE FIX ---
+        // We only set 'Loading' if the user is NOT already authenticated.
+        // This stops the flicker on every screen load.
+        if (_authState.value !is AuthState.Authenticated) {
+            _authState.value = AuthState.Loading
+        }
+        // --- END OF FIX ---
+
         try {
             val userDoc = db.collection("users").document(userId).get().await()
             val userType = userDoc.getString("userType") ?: "patient"

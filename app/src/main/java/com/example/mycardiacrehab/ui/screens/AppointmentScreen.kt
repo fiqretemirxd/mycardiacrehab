@@ -24,25 +24,27 @@ import java.util.*
 @Composable
 fun AppointmentScreen(
     authViewModel: AuthViewModel,
-    appointmentViewModel: AppointmentViewModel // The shared VM
+    appointmentViewModel: AppointmentViewModel
 ) {
-    // Get current user's ID
-    val authState = authViewModel.authState.collectAsState().value
-    val currentUserId = (authState as? AuthViewModel.AuthState.Authenticated)?.userId ?: return
-
+    val authState by authViewModel.authState.collectAsState()
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabs = listOf("Upcoming", "Past", "Cancelled")
 
-    // This effect now re-runs whenever the user ID OR the selected tab index changes
+    // --- THIS IS THE FIX ---
+
+    // 1. Get the currentUserId, but make it nullable (don't `?: return`)
+    val currentUserId = (authState as? AuthViewModel.AuthState.Authenticated)?.userId
+
+    // 2. Update the LaunchedEffect to ONLY run when currentUserId is not null
     LaunchedEffect(currentUserId, selectedTabIndex) {
-        val category = tabs[selectedTabIndex].lowercase(Locale.ROOT)
-
-        // --- FIX: Call the RENAMED tab-specific function ---
-        appointmentViewModel.loadAppointmentsForTab(currentUserId, category)
+        if (currentUserId != null) {
+            val category = tabs[selectedTabIndex].lowercase(Locale.ROOT)
+            appointmentViewModel.loadAppointmentsForTab(currentUserId, category) // Use the function from the last fix
+        }
     }
+    // --- END OF FIX ---
 
-    // --- FIX: This observation is now correct and separate ---
-    val currentList by appointmentViewModel.appointments.collectAsState()
+    val currentList by appointmentViewModel.appointments.collectAsState() // Use the tab-specific list
     val isLoading by appointmentViewModel.isLoading.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -66,7 +68,6 @@ fun AppointmentScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         if (isLoading) {
-            // Show loading indicator
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -74,7 +75,6 @@ fun AppointmentScreen(
                 CircularProgressIndicator()
             }
         } else {
-            // Display the list once loading is complete
             AppointmentList(
                 appointments = currentList,
                 emptyMessage = "No appointments in ${tabs[selectedTabIndex]}.",
