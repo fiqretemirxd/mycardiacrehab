@@ -15,11 +15,9 @@ import com.google.firebase.firestore.ListenerRegistration // Ensure this is impo
 class AppointmentViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
 
-    // --- FIX 1: One list for the AppointmentScreen (tabs) ---
     private val _appointments = MutableStateFlow<List<Appointment>>(emptyList())
     val appointments: StateFlow<List<Appointment>> = _appointments
 
-    // --- FIX 2: A new, separate list for the Dashboard ---
     private val _dashboardAppointments = MutableStateFlow<List<Appointment>>(emptyList())
     val dashboardAppointments: StateFlow<List<Appointment>> = _dashboardAppointments
 
