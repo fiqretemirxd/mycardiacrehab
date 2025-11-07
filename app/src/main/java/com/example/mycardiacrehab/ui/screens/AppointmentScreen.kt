@@ -31,10 +31,9 @@ fun AppointmentScreen(
     val tabs = listOf("Upcoming", "Past", "Cancelled")
 
     // --- THIS IS THE FIX ---
+    val currentUserId = (authState as? AuthViewModel.AuthState.Authenticated)?.userId
 
     val isReady = authState is AuthViewModel.AuthState.Authenticated
-    // 1. Get the currentUserId, but make it nullable (don't `?: return`)
-    val currentUserId = (authState as? AuthViewModel.AuthState.Authenticated)?.userId
 
     val loadAppointments = remember<(Int) -> Unit> {
         { index ->

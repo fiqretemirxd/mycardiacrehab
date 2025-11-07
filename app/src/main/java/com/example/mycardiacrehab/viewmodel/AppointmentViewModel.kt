@@ -32,7 +32,12 @@ class AppointmentViewModel : ViewModel() {
 
     // --- NEW FUNCTION: Only for the Dashboard (PatientHomeScreen) ---
     fun loadAppointmentsForDashboard(userId: String) {
-        if (userId.isBlank()) return
+        if (userId.isBlank()) {
+            dashboardListener?.remove() // Remove any old dashboard listener
+            _dashboardAppointments.value = emptyList()
+            return
+        }
+
         dashboardListener?.remove() // Remove any old dashboard listener
 
         val now = Date()
@@ -55,52 +60,63 @@ class AppointmentViewModel : ViewModel() {
 
     // --- RENAMED FUNCTION: Only for the AppointmentScreen ---
     fun loadAppointmentsForTab(userId: String, category: String) {
-        if (userId.isBlank()) return
+        if (userId.isBlank()) {
+            tabListener?.remove() // Remove any old tab listener
+            _appointments.value = emptyList()
+            _isLoading.value = false
+            return
+        }
 
         _isLoading.value = true
         tabListener?.remove() // Remove any old tab listener
 
-        val now = Date()
-        var query: Query = db.collection("appointments")
-            .whereEqualTo("patientId", userId)
+        viewModelScope.launch {
+            val now = Date()
+            var query: Query = db.collection("appointments")
+                .whereEqualTo("patientId", userId)
 
-        when (category) {
-            "upcoming" -> {
-                query = query
-                    .whereEqualTo("status", "scheduled")
-                    .whereGreaterThan("appointmentDateTime", now)
-                    .orderBy("appointmentDateTime", Query.Direction.ASCENDING)
-            }
-            "past" -> {
-                query = query
-                    .orderBy("appointmentDateTime", Query.Direction.DESCENDING)
-            }
-            "cancelled" -> {
-                query = query
-                    .whereEqualTo("status", "cancelled")
-                    .orderBy("appointmentDateTime", Query.Direction.DESCENDING)
-            }
-        }
-
-        tabListener = query.addSnapshotListener { snapshot, e ->
-            if (e != null) {
-                _appointments.value = emptyList()
-                _isLoading.value = false
-                return@addSnapshotListener
-            }
-
-            val list = snapshot?.documents?.mapNotNull { doc ->
-                doc.toObject(Appointment::class.java)?.apply { this.appointmentId = doc.id }
-            } ?: emptyList()
-
-            if (category == "past") {
-                _appointments.value = list.filter {
-                    it.status == "completed" || (it.status == "scheduled" && it.appointmentDateTime.toDate().before(now))
+            when (category) {
+                "upcoming" -> {
+                    query = query
+                        .whereEqualTo("status", "scheduled")
+                        .whereGreaterThan("appointmentDateTime", now)
+                        .orderBy("appointmentDateTime", Query.Direction.ASCENDING)
                 }
-            } else {
-                _appointments.value = list
+
+                "past" -> {
+                    query = query
+                        .orderBy("appointmentDateTime", Query.Direction.DESCENDING)
+                }
+
+                "cancelled" -> {
+                    query = query
+                        .whereEqualTo("status", "cancelled")
+                        .orderBy("appointmentDateTime", Query.Direction.DESCENDING)
+                }
             }
-            _isLoading.value = false
+
+
+            tabListener = query.addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    _appointments.value = emptyList()
+                    _isLoading.value = false
+                    return@addSnapshotListener
+                }
+
+                val list = snapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(Appointment::class.java)?.apply { this.appointmentId = doc.id }
+                } ?: emptyList()
+
+                if (category == "past") {
+                    _appointments.value = list.filter {
+                        it.status == "completed" || (it.status == "scheduled" && it.appointmentDateTime.toDate()
+                            .before(now))
+                    }
+                } else {
+                    _appointments.value = list
+                }
+                _isLoading.value = false
+            }
         }
     }
 
