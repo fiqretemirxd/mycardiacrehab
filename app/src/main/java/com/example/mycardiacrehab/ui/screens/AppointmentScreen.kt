@@ -32,6 +32,7 @@ fun AppointmentScreen(
 
     // --- THIS IS THE FIX ---
 
+    val isReady = authState is AuthViewModel.AuthState.Authenticated
     // 1. Get the currentUserId, but make it nullable (don't `?: return`)
     val currentUserId = (authState as? AuthViewModel.AuthState.Authenticated)?.userId
 
@@ -47,7 +48,7 @@ fun AppointmentScreen(
     // 2. Update the LaunchedEffect to ONLY run when currentUserId is not null
     LaunchedEffect(currentUserId) {
         if (currentUserId != null) {
-            loadAppointments(selectedTabIndex)
+            loadAppointments(0)
         }
     }
     // --- END OF FIX ---
@@ -62,35 +63,45 @@ fun AppointmentScreen(
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(16.dp)
         )
-
-        TabRow(selectedTabIndex = selectedTabIndex) {
-            tabs.forEachIndexed { index, title ->
-                Tab(
-                    selected = selectedTabIndex == index,
-                    onClick = {
-                        selectedTabIndex = index
-                        loadAppointments(index)
-                    },
-                    text = { Text(title) }
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        if (isLoading) {
+        if (!isReady) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator()
+                Text("Authenticating...", style = MaterialTheme.typography.titleMedium)
+                CircularProgressIndicator(Modifier.padding(top = 32.dp))
             }
         } else {
-            AppointmentList(
-                appointments = currentList,
-                emptyMessage = "No appointments in ${tabs[selectedTabIndex]}.",
-                viewModel = appointmentViewModel
-            )
+
+            TabRow(selectedTabIndex = selectedTabIndex) {
+                tabs.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTabIndex == index,
+                        onClick = {
+                            selectedTabIndex = index
+                            loadAppointments(index)
+                        },
+                        text = { Text(title) }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                AppointmentList(
+                    appointments = currentList,
+                    emptyMessage = "No appointments in ${tabs[selectedTabIndex]}.",
+                    viewModel = appointmentViewModel
+                )
+            }
         }
     }
 }
