@@ -2,23 +2,30 @@ package com.example.mycardiacrehab.ui.screens
 
 import android.os.Build
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.background
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Download
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+// --- THIS IMPORT FIXES YOUR ERRORS ---
+import androidx.compose.runtime.collectAsState
+// -------------------------------------
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mycardiacrehab.viewmodel.AuthViewModel
 import com.example.mycardiacrehab.viewmodel.ProgressViewModel
-import com.example.mycardiacrehab.viewmodel.WeeklySummary
+import kotlin.math.roundToInt
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -26,196 +33,146 @@ fun ProgressScreen(
     authViewModel: AuthViewModel = viewModel(),
     progressViewModel: ProgressViewModel = viewModel()
 ) {
-    val authState = authViewModel.authState.collectAsState().value
-    val currentUserId = (authState as? AuthViewModel.AuthState.Authenticated)?.userId ?: return
-
-    LaunchedEffect(currentUserId) {
-        progressViewModel.loadWeeklyProgress(currentUserId)
-    }
-
+    val authState by authViewModel.authState.collectAsState()
+    // These lines will now work because of the import above
     val summary by progressViewModel.weeklySummary.collectAsState()
     val isLoading by progressViewModel.loading.collectAsState()
 
-    LazyColumn(
+    val currentUserId = (authState as? AuthViewModel.AuthState.Authenticated)?.userId
+
+    // Load progress when the user ID is available
+    LaunchedEffect(currentUserId) {
+        if (currentUserId != null) {
+            progressViewModel.loadWeeklyProgress(currentUserId)
+        }
+    }
+
+    // --- Target values for the charts ---
+    val exerciseTarget = 150f
+    val adherenceTarget = 100f
+
+    // Calculate percentages
+    val exercisePercentage = (summary?.totalExerciseMinutes ?: 0) / exerciseTarget
+    val adherencePercentage = (summary?.adherenceRate ?: 0) / adherenceTarget
+
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        item {
+        Text(
+            "Weekly Progress",
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
+
+        if (isLoading) {
+            CircularProgressIndicator(modifier = Modifier.padding(top = 64.dp))
+        } else {
+            // --- Exercise Progress Chart ---
+            Text("Weekly Exercise", style = MaterialTheme.typography.titleLarge)
             Text(
-                "Your Rehabilitation Progress",
-                style = MaterialTheme.typography.headlineMedium,
+                "Target: ${exerciseTarget.roundToInt()} minutes",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.Gray
+            )
+            Spacer(Modifier.height(16.dp))
+            ProgressDonutChart(
+                percentage = exercisePercentage,
+                value = summary?.totalExerciseMinutes ?: 0,
+                unit = "min",
                 color = MaterialTheme.colorScheme.primary
             )
+
+            Spacer(Modifier.height(32.dp))
+            HorizontalDivider() // Use HorizontalDivider
+            Spacer(Modifier.height(32.dp))
+
+            // --- Medication Adherence Chart ---
+            Text("Medication Adherence", style = MaterialTheme.typography.titleLarge)
             Text(
-                text = "Summary for ${summary?.weekStart ?: "Loading..."}",
-                style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.padding(bottom = 16.dp)
+                "Target: ${adherenceTarget.roundToInt()}%",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.Gray
             )
-
-            if (isLoading) {
-                CircularProgressIndicator(Modifier.padding(32.dp))
-            } else if (summary != null) {
-                SummaryCardsRow(summary!!)
-                Spacer(Modifier.height(24.dp))
-
-                Text(
-                    "Weekly Exercise Minutes",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                WeeklyBarChart(summary!!.dailyMins)
-                Spacer(Modifier.height(24.dp))
-
-                ReportActions()
-            } else {
-                Text(
-                    "No recent progress data available",
-                    color = Color.Gray,
-                    modifier = Modifier.padding(16.dp)
-                )
-            }
+            Spacer(Modifier.height(16.dp))
+            ProgressDonutChart(
+                percentage = adherencePercentage,
+                value = summary?.adherenceRate ?: 0,
+                unit = "%",
+                color = MaterialTheme.colorScheme.tertiary
+            )
         }
     }
 }
 
+/**
+ * A custom composable for a circular progress (donut) chart.
+ */
 @Composable
-fun SummaryCardsRow(summary: WeeklySummary) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        SummaryCard(
-            title = "Exercise Mins",
-            value = "${summary.totalExerciseMinutes} ",
-            subtitle = "Last 7 Days",
-            modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.tertiary
-        )
-        SummaryCard(
-            title = "Meds Adherence",
-            value = "${summary.adherenceRate}%",
-            subtitle = "Weekly Goal",
-            modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.secondary
-        )
-    }
-    Spacer(Modifier.height(16.dp))
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        SummaryCard(
-            title = "Mood Trend",
-            value = summary.moodTrend,
-            subtitle = "Journal Status",
-            modifier = Modifier.weight(1f),
-            color = if (summary.moodTrend == "Good") Color(0xFF4CAF50) else MaterialTheme.colorScheme.error
-        )
-    }
-}
+fun ProgressDonutChart(
+    percentage: Float,
+    value: Int,
+    unit: String,
+    color: Color,
+    strokeWidth: Dp = 16.dp,
+    animationDuration: Int = 1000,
+    size: Dp = 200.dp
+) {
+    var animationPlayed by remember { mutableStateOf(false) }
 
-@Composable
-fun SummaryCard(title: String, value: String, subtitle: String, modifier: Modifier, color: Color) {
-    Card(
-        modifier = modifier.height(120.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f)),
-        elevation = CardDefaults.cardElevation(2.dp)
+    val currentPercentage = animateFloatAsState(
+        targetValue = if (animationPlayed) percentage else 0f,
+        animationSpec = tween(durationMillis = animationDuration),
+        label = "progressAnimation"
+    )
+
+    LaunchedEffect(Unit) {
+        animationPlayed = true
+    }
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier.size(size)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(title, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(value, style = MaterialTheme.typography.headlineMedium.copy(color = color))
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        // Background track
+        Canvas(modifier = Modifier.size(size)) {
+            drawArc(
+                color = color.copy(alpha = 0.2f),
+                startAngle = -90f,
+                sweepAngle = 360f,
+                useCenter = false,
+                style = Stroke(width = strokeWidth.toPx(), cap = StrokeCap.Round)
+            )
         }
-    }
-}
 
-@Composable
-fun WeeklyBarChart(dailyMins: List<Pair<String, Int>>) {
-    //val totalMinutes = dailyMins.sumOf { it.second }
-    val maxMins = dailyMins.maxOfOrNull { it.second } ?: 1
-    val scaleFactor = 1f / maxMins
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(250.dp)
-            .padding(top = 8.dp),
-        elevation = CardDefaults.cardElevation(4.dp),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.Bottom
-        ) {
-            dailyMins.forEach { (day, mins) ->
-                val barHeightFraction = mins.toFloat() * scaleFactor
-
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                    Text(text = mins.toString(), style = MaterialTheme.typography.labelSmall)
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(0.6f)
-                            .height(150.dp)
-                            .background(Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(4.dp)),
-                        contentAlignment = Alignment.BottomCenter
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .fillMaxHeight(barHeightFraction)
-                                .background(
-                                    MaterialTheme.colorScheme.primary,
-                                    RoundedCornerShape(4.dp)
-                                )
-                        )
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    Text(day, style = MaterialTheme.typography.labelMedium)
-                }
-            }
+        // Foreground progress
+        Canvas(modifier = Modifier.size(size)) {
+            drawArc(
+                color = color,
+                startAngle = -90f,
+                sweepAngle = 360 * currentPercentage.value,
+                useCenter = false,
+                style = Stroke(width = strokeWidth.toPx(), cap = StrokeCap.Round)
+            )
         }
-    }
-}
 
-@Composable
-fun ReportActions() {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Column(Modifier.padding(16.dp)) {
+        // Text in the center
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                "Generate PDF Report",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 8.dp)
+                text = value.toString(),
+                fontSize = 40.sp,
+                fontWeight = FontWeight.Bold,
+                color = color
             )
             Text(
-                "Create a detailed progress report to share with your healthcare provider.",
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(bottom = 16.dp)
+                text = unit,
+                fontSize = 20.sp,
+                color = Color.Gray
             )
-            Button(
-                onClick = { /* TODO: Implement PDF generation logic */ },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.Download, contentDescription = "Download Report")
-                Spacer(Modifier.width(8.dp))
-                Text("DOWNLOAD REPORT")
-            }
         }
     }
 }
