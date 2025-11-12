@@ -3,8 +3,10 @@ package com.example.mycardiacrehab.ui.screens
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState // <-- ADD THIS IMPORT
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll // <-- ADD THIS IMPORT
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MailOutline
@@ -31,14 +33,13 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     val authState by viewModel.authState.collectAsState()
 
-    // Define colors that match the screenshot (Dark Teal and Blue)
-    val primaryTeal = Color(0xFF00695C) // Dark Teal Background
-    val primaryBlue = Color(0xFF1E88E5) // Primary Button Color
+    val primaryTeal = Color(0xFF00695C)
+    val primaryBlue = Color(0xFF1E88E5)
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(primaryTeal) // 🟢 Teal Background
+            .background(primaryTeal)
             .imePadding(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -52,47 +53,55 @@ fun LoginScreen(
             elevation = CardDefaults.cardElevation(8.dp)
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                // --- FIXES ARE HERE ---
+                modifier = Modifier
+                    .padding(24.dp)
+                    .verticalScroll(rememberScrollState()), // 1. Added scroll
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp) // 2. Added automatic spacing
+                // -----------------------
             ) {
                 // --- Logo and Title ---
-                Image(
-                    painter = painterResource(id = R.drawable.logo),
-                    contentDescription = "MyCardiacRehab Logo",
-                    modifier = Modifier.size(50.dp)
-                )
-                Text(
-                    "MyCardiacRehab",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = Color.Black
-                )
-                Spacer(Modifier.height(16.dp))
+                // (Wrap in a Column to keep them together)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Image(
+                        painter = painterResource(id = R.drawable.logo),
+                        contentDescription = "MyCardiacRehab Logo",
+                        modifier = Modifier.size(50.dp)
+                    )
+                    Text(
+                        "MyCardiacRehab",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = Color.Black
+                    )
+                }
 
-                Text(
-                    "Login",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.align(Alignment.Start)
-                )
-                Spacer(Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.align(Alignment.Start)
-                ) {
-                    Text("Don't have an account? ")
-                    TextButton(
-                        onClick = onNavigateToSignUp,
-                        contentPadding = PaddingValues(0.dp),
-                        modifier = Modifier.height(20.dp)
+                // --- Header ---
+                // (Wrap in a Column to keep them together)
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        "Login",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.align(Alignment.Start)
+                    )
+                    Row(
+                        modifier = Modifier.align(Alignment.Start)
                     ) {
-                        Text(
-                            "Sign Up",
-                            color = primaryBlue, // 🟢 Blue Link Color
-                            fontWeight = FontWeight.SemiBold
-                        )
+                        Text("Don't have an account? ")
+                        TextButton(
+                            onClick = onNavigateToSignUp,
+                            contentPadding = PaddingValues(0.dp),
+                            modifier = Modifier.height(20.dp)
+                        ) {
+                            Text(
+                                "Sign Up",
+                                color = primaryBlue,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                 }
-                Spacer(Modifier.height(16.dp))
 
                 // --- Inputs ---
                 OutlinedTextField(
@@ -103,7 +112,7 @@ fun LoginScreen(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(Modifier.height(16.dp))
+                // Removed Spacer(Modifier.height(16.dp))
 
                 OutlinedTextField(
                     value = password,
@@ -114,14 +123,14 @@ fun LoginScreen(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(Modifier.height(24.dp))
+                // Removed Spacer(Modifier.height(24.dp))
 
                 // --- Login Button ---
                 Button(
                     onClick = { viewModel.login(email, password) },
                     enabled = authState != AuthViewModel.AuthState.Loading,
                     modifier = Modifier.fillMaxWidth().height(50.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = primaryBlue) // 🟢 Blue Button
+                    colors = ButtonDefaults.buttonColors(containerColor = primaryBlue)
                 ) {
                     if (authState == AuthViewModel.AuthState.Loading) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
@@ -129,13 +138,11 @@ fun LoginScreen(
                         Text("Log in")
                     }
                 }
-                Spacer(Modifier.height(16.dp))
-
-
+                // Removed Spacer(Modifier.height(16.dp))
 
                 // --- Error Display ---
                 if (authState is AuthViewModel.AuthState.Error) {
-                    Text((authState as AuthViewModel.AuthState.Error).message, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 16.dp))
+                    Text((authState as AuthViewModel.AuthState.Error).message, color = MaterialTheme.colorScheme.error)
                 }
             }
         }

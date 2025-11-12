@@ -36,8 +36,8 @@ fun SignUpScreen(
 
     val authState by viewModel.authState.collectAsState()
 
-    val primaryTeal = Color(0xFF00695C) // Dark Teal Background
-    val primaryBlue = Color(0xFF1E88E5) // Primary Button Color
+    val primaryTeal = Color(0xFF00695C)
+    val primaryBlue = Color(0xFF1E88E5)
 
     Column(
         modifier = Modifier
@@ -56,10 +56,13 @@ fun SignUpScreen(
             elevation = CardDefaults.cardElevation(8.dp)
         ) {
             Column(
+                // --- FIXES ARE HERE ---
                 modifier = Modifier
                     .padding(24.dp)
-                    .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .verticalScroll(rememberScrollState()), // Already had scroll
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp) // 1. Added automatic spacing
+                // -----------------------
             ) {
                 // --- Header and Title ---
                 Row(
@@ -76,7 +79,7 @@ fun SignUpScreen(
                     )
                 }
 
-                Spacer(Modifier.height(8.dp))
+                // Removed Spacer(Modifier.height(8.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -95,7 +98,7 @@ fun SignUpScreen(
                         )
                     }
                 }
-                Spacer(Modifier.height(16.dp))
+                // Removed Spacer(Modifier.height(16.dp))
 
                 // --- Inputs ---
                 OutlinedTextField(
@@ -105,7 +108,7 @@ fun SignUpScreen(
                     leadingIcon = { Icon(Icons.Default.Person, contentDescription = "Full Name") },
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(Modifier.height(16.dp))
+                // Removed Spacer(Modifier.height(16.dp))
 
                 OutlinedTextField(
                     value = email,
@@ -115,7 +118,7 @@ fun SignUpScreen(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(Modifier.height(16.dp))
+                // Removed Spacer(Modifier.height(16.dp))
 
                 // --- Password Input ---
                 OutlinedTextField(
@@ -127,7 +130,7 @@ fun SignUpScreen(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(Modifier.height(16.dp))
+                // Removed Spacer(Modifier.height(16.dp))
 
                 // --- Provider Checkbox (Admin Check) ---
                 Row(
@@ -137,7 +140,7 @@ fun SignUpScreen(
                     Checkbox(checked = isProvider, onCheckedChange = { isProvider = it })
                     Text("Register as Healthcare Provider (Requires Approval)", style = MaterialTheme.typography.bodySmall)
                 }
-                Spacer(Modifier.height(24.dp))
+                // Removed Spacer(Modifier.height(24.dp))
 
                 // --- Register Button ---
                 Button(
