@@ -16,5 +16,7 @@ sealed class PatientScreen(val route: String, val title: String, val icon: Image
     object Progress : PatientScreen("progress", "Progress", Icons.Filled.TrendingUp)
     object Journal : PatientScreen("journal", "Journal", Icons.Default.Book)
     object Appointments : PatientScreen("appointments", "Appointments", Icons.Default.CalendarMonth)
+
+    object Profile : PatientScreen("profile", "Profile", Icons.Default.Person)
 }
 

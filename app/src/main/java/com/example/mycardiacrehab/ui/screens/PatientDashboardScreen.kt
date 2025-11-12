@@ -32,6 +32,7 @@ import com.example.mycardiacrehab.viewmodel.AppointmentViewModel
 import com.example.mycardiacrehab.viewmodel.AuthViewModel
 import com.example.mycardiacrehab.viewmodel.MedicationViewModel
 import com.example.mycardiacrehab.viewmodel.ProgressViewModel
+import com.example.mycardiacrehab.viewmodel.ProfileViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlinx.coroutines.joinAll
@@ -53,6 +54,7 @@ fun PatientDashboardScreen(
     val appointmentViewModel: AppointmentViewModel = viewModel()
     val medicationViewModel: MedicationViewModel = viewModel()
     val progressViewModel: ProgressViewModel = viewModel()
+    val profileViewModel: ProfileViewModel = viewModel()
 
 
     val primaryTeal = Color(0xFF00695C)
@@ -153,6 +155,15 @@ fun PatientDashboardScreen(
                     progressViewModel = progressViewModel
                 )
             }
+
+            composable(PatientScreen.Profile.route) {
+                ProfileScreen(
+                    navController = navController,
+                    authViewModel = authViewModel,
+                    profileViewModel = profileViewModel
+                )
+            }
+
             composable(PatientScreen.More.route) { MoreScreen(navController = navController) }
         }
     }
@@ -401,6 +412,12 @@ fun MoreScreen(navController: NavHostController) {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text("More Options", style = MaterialTheme.typography.headlineMedium)
+
+        MoreNavigationItem(
+            title = PatientScreen.Profile.title,
+            icon = PatientScreen.Profile.icon,
+            onClick = { navController.navigate(PatientScreen.Profile.route) }
+        )
 
         MoreNavigationItem(
             title = PatientScreen.Progress.title,

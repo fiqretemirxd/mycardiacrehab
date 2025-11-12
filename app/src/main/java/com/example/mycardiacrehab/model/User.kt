@@ -10,6 +10,13 @@ data class User(
     val userType: String = "patient",
     val specialization: String? = null,
 
+    //addon
+    val medicalHistory: String? = null,
+    val allergies: String? = null,
+    val emergencyContactName: String? = null,
+    val emergencyContactNumber: String? = null,
+
+
     @ServerTimestamp
     val createdAt: Date? = null
 
