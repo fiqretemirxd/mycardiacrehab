@@ -32,6 +32,7 @@ import com.example.mycardiacrehab.ui.navigation.ProviderScreen
 import com.example.mycardiacrehab.viewmodel.AuthViewModel
 import com.example.mycardiacrehab.viewmodel.ProviderViewModel
 import com.example.mycardiacrehab.viewmodel.ProfileViewModel
+import com.example.mycardiacrehab.viewmodel.ReportViewModel
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,6 +44,7 @@ fun ProviderDashboardScreen(
 
     val currentUser by authViewModel.currentUser.collectAsState()
     val profileViewModel: ProfileViewModel = viewModel()
+    val reportViewModel: ReportViewModel = viewModel()
 
     val items = listOf(
         ProviderScreen.PatientList,
@@ -133,7 +135,8 @@ fun ProviderDashboardScreen(
             composable(ProviderScreen.ReportCenter.route) {
                 // ✨ FIX 2: Pass the ViewModel to the Report Center Screen
                 ReportCenterScreen(
-                    providerViewModel = providerViewModel // Now being used
+                    providerViewModel = providerViewModel, // Now being used
+                    reportViewModel = reportViewModel // Now being used
                 )
             }
 

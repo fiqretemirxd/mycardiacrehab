@@ -1,7 +1,7 @@
 package com.example.mycardiacrehab.viewmodel
 
-import android.os.Build // Import Build
-import androidx.annotation.RequiresApi // Import RequiresApi
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mycardiacrehab.model.*
@@ -13,85 +13,112 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
 
 @RequiresApi(Build.VERSION_CODES.O)
 class ReportViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
 
+    // This holds the generated report object
     private val _report = MutableStateFlow<PatientReport?>(null)
     val report: StateFlow<PatientReport?> = _report
 
-    private val _loading = MutableStateFlow(false)
-    val loading: StateFlow<Boolean> = _loading
+    // This will show a loading spinner on the UI
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading // <-- THIS PROPERTY WAS MISSING
 
-    // --- Core Logic: Generate Comprehensive Report (F04-2) ---
-    fun generateReport(patientId: String, patientName: String, days: Int) = viewModelScope.launch {
+    /**
+     * Generates a comprehensive report for a specific patient over a given number of days.
+     */
+    fun generateReport(patientId: String, patientName: String, daysToCover: Int) = viewModelScope.launch {
         if (patientId.isBlank()) return@launch
-        _loading.value = true
+        _isLoading.value = true
+        _report.value = null // Clear the previous report
 
         try {
-            // ✨ 3. Define the start and end dates using the modern LocalDate API
+            // Define the time range for the report
             val endDate = LocalDate.now()
-            val startDate = endDate.minusDays(days.toLong() - 1)
+            val startDate = endDate.minusDays(daysToCover.toLong() - 1)
             val startTime = Timestamp(startDate.atStartOfDay(ZoneId.systemDefault()).toEpochSecond(), 0)
 
-            // 1. Fetch ALL Data Streams
-            val exerciseLogs = db.collection("exerciselog").whereEqualTo("userId", patientId)
-                .whereGreaterThan("timestamp", startTime).get().await().toObjects(ExerciseLog::class.java)
-            val medicationLogs = db.collection("medicationreminders").whereEqualTo("userId", patientId)
-                .whereGreaterThan("logDate", startTime).get().await().toObjects(MedicationReminder::class.java)
-            val journalEntries = db.collection("patientjournal").whereEqualTo("userId", patientId)
-                .whereGreaterThan("entryDate", startTime).get().await().toObjects(JournalEntry::class.java)
-            val chatInteractions = db.collection("mycardiacrehab_chat").whereEqualTo("userId", patientId)
-                .whereGreaterThan("timestamp", startTime).get().await().toObjects(ChatMessage::class.java)
+            // 1. Fetch all data streams concurrently
+            val exerciseLogs = db.collection("exerciselog")
+                .whereEqualTo("userId", patientId)
+                .whereGreaterThan("timestamp", startTime)
+                .get().await().toObjects(ExerciseLog::class.java)
 
-            // 2. Aggregate Metrics
+            val medicationLogs = db.collection("MedicationReminders")
+                .whereEqualTo("userId", patientId)
+                .whereGreaterThan("timestamp", startTime)
+                .get().await().toObjects(MedicationReminder::class.java)
+
+            val journalEntries = db.collection("patientjournal")
+                .whereEqualTo("userId", patientId)
+                .whereGreaterThan("entryDate", startTime)
+                .get().await().toObjects(JournalEntry::class.java)
+
+            val chatInteractions = db.collection("mycardiacrehab_chat")
+                .whereEqualTo("userId", patientId)
+                .whereGreaterThan("timestamp", startTime)
+                .get().await().toObjects(ChatMessage::class.java)
+
+            // 2. Aggregate the data
             val totalMins = exerciseLogs.sumOf { it.duration }
             val adherenceRate = calculateAdherenceRate(medicationLogs)
-            val symptom = analyzeSymptoms(journalEntries)
-            val outOfScopeCount = chatInteractions.count { !it.isInScope }
+            val commonSymptom = analyzeSymptoms(journalEntries)
             val totalChats = chatInteractions.count { it.role == "user" }
+            val outOfScopeChats = chatInteractions.count { !it.isInScope }
 
-            val complianceRate = if (totalMins > 150 * (days/7.0)) 100 else (totalMins / (150 * (days/7.0).toFloat()) * 100).roundToInt()
+            val weeklyExerciseTarget = 150
+            val complianceRate = ((totalMins.toDouble() / weeklyExerciseTarget) * 100).roundToInt().coerceAtMost(100)
 
-            // ✨ 4. Call the new PatientReport constructor with the correct parameters
+            // 3. Create the report object
             _report.value = PatientReport(
+                patientId = patientId,
                 patientName = patientName,
+                dateGenerated = LocalDate.now(),
                 startDate = startDate,
                 endDate = endDate,
-                dateGenerated = LocalDate.now(), // Use today's date
                 totalExerciseMinutes = totalMins,
                 exerciseComplianceRate = complianceRate,
                 medicationAdherenceRate = adherenceRate,
-                mostCommonSymptoms = symptom,
+                mostCommonSymptoms = commonSymptom,
                 totalChatInteractions = totalChats,
-                outOfScopeInteractions = outOfScopeCount
+                outOfScopeInteractions = outOfScopeChats
             )
 
         } catch (e: Exception) {
             println("Error generating report: ${e.message}")
             _report.value = null
         } finally {
-            _loading.value = false
+            _isLoading.value = false
         }
     }
 
-    // Helper to calculate Medication Adherence
     private fun calculateAdherenceRate(logs: List<MedicationReminder>): Int {
-        val relevantLogs = logs.filter { it.reminderStatus == "Taken" || it.reminderStatus == "Missed" }
-        val totalDoses = relevantLogs.size
-        if (totalDoses == 0) return 100 // If no doses were scheduled, adherence is 100%
-        val dosesTaken = relevantLogs.count { it.reminderStatus == "Taken" }
+        val totalDoses = logs.size
+        if (totalDoses == 0) return 100
+        val dosesTaken = logs.count { it.reminderStatus == "Taken" }
         return (dosesTaken.toDouble() / totalDoses * 100).roundToInt()
     }
 
-    // Helper to analyze Symptoms
     private fun analyzeSymptoms(entries: List<JournalEntry>): String {
-        return entries.mapNotNull { it.symptoms }.flatMap { it.split(",", ";") }
-            .map { it.trim().lowercase() } // Use lowercase to group similar symptoms
+        val allSymptoms = entries
+            .mapNotNull { it.symptoms }
             .filter { it.isNotBlank() }
+            .flatMap { it.split(",", ";") }
+            .map { it.trim().lowercase() }
+            .filter { it.isNotEmpty() }
+
+        if (allSymptoms.isEmpty()) {
+            return "None Reported"
+        }
+
+        return allSymptoms
             .groupBy { it }
-            .maxByOrNull { it.value.size }?.key?.replaceFirstChar { it.uppercase() } ?: "None reported."
+            .mapValues { it.value.size }
+            .maxByOrNull { it.value }?.key
+            ?.replaceFirstChar { it.uppercase() } ?: "None Reported"
     }
 }
