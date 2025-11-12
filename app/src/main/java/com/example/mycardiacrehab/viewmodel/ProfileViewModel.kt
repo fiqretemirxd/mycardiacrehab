@@ -22,7 +22,7 @@ class ProfileViewModel : ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    // For showing a success message (like a Snackbar) on the UI
+    // For showing a success message (like a Snack bar) on the UI
     private val _saveSuccess = MutableStateFlow(false)
     val saveSuccess: StateFlow<Boolean> = _saveSuccess
 
@@ -90,10 +90,40 @@ class ProfileViewModel : ViewModel() {
             }
         }
     }
-
     /**
      * Resets the save success flag (so the message can be hidden).
      */
+    fun saveProviderProfile(
+        userId: String,
+        fullName: String,
+        specialization: String,
+    ) {
+        if (userId.isBlank()) return
+        _isLoading.value = true
+        _saveSuccess.value = false
+
+        viewModelScope.launch {
+            try {
+                val updates = mapOf(
+                    "fullName" to fullName,
+                    "specialization" to specialization
+                )
+                usersCollection.document(userId).update(updates).await()
+
+                _userProfile.value = _userProfile.value?.copy(
+                    fullName = fullName,
+                    specialization = specialization
+                )
+                _saveSuccess.value = true
+            } catch (e: Exception) {
+                println("Error saving provider profile: ${e.message}")
+                _saveSuccess.value = false
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     fun resetSaveSuccess() {
         _saveSuccess.value = false
     }

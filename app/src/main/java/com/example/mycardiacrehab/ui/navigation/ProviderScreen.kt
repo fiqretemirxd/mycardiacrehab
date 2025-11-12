@@ -19,5 +19,7 @@ sealed class ProviderScreen(val route: String, val title: String, val icon: Imag
 
     object PatientDetail : ProviderScreen("patient_detail/{patientId}", "Patient Details", Icons.Default.Group)
 
+    object Profile : ProviderScreen("provider_profile", "Profile", Icons.Default.Group)
+
     fun createRoute(patientId: String) = "patient_detail/$patientId"
 }

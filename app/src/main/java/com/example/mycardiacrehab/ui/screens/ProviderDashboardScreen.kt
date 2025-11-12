@@ -2,20 +2,26 @@ package com.example.mycardiacrehab.ui.screens
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-//import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -25,6 +31,7 @@ import androidx.navigation.navArgument
 import com.example.mycardiacrehab.ui.navigation.ProviderScreen
 import com.example.mycardiacrehab.viewmodel.AuthViewModel
 import com.example.mycardiacrehab.viewmodel.ProviderViewModel
+import com.example.mycardiacrehab.viewmodel.ProfileViewModel
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,7 +42,7 @@ fun ProviderDashboardScreen(
 ) {
 
     val currentUser by authViewModel.currentUser.collectAsState()
-
+    val profileViewModel: ProfileViewModel = viewModel()
 
     val items = listOf(
         ProviderScreen.PatientList,
@@ -74,7 +81,8 @@ fun ProviderDashboardScreen(
                 val currentDestination = navBackStackEntry?.destination
 
                 items.forEach { screen ->
-                    val isSelected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
+                    val isSelected =
+                        currentDestination?.hierarchy?.any { it.route == screen.route } == true
 
                     NavigationBarItem(
                         icon = { Icon(screen.icon, contentDescription = screen.title) },
@@ -131,7 +139,18 @@ fun ProviderDashboardScreen(
 
             // --- Settings ---
             composable(ProviderScreen.Settings.route) {
-                Text("Provider Settings (WIP)", modifier = Modifier.padding(innerPadding))
+                ProviderSettingsScreen(
+                    navController = navController,
+                    authViewModel = authViewModel,
+                )
+            }
+
+            composable(ProviderScreen.Profile.route) {
+                ProviderProfileScreen(
+                    navController = navController,
+                    authViewModel = authViewModel,
+                    profileViewModel = profileViewModel
+                )
             }
 
             // --- PATIENT DETAIL SCREEN (Uses navArgument and NavType) ---
@@ -149,3 +168,24 @@ fun ProviderDashboardScreen(
         }
     }
 }
+    @Composable
+    fun ProviderSettingsScreen(
+        navController: NavHostController,
+        authViewModel: AuthViewModel
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text("Settings", style = MaterialTheme.typography.headlineMedium)
+
+            MoreNavigationItem(
+                title = "Edit Profile",
+                icon = ProviderScreen.Profile.icon,
+                onClick = { navController.navigate(ProviderScreen.Profile.route) }
+            )
+        }
+    }
+
