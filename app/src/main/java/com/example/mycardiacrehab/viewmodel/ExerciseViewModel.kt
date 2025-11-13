@@ -66,4 +66,39 @@ class ExerciseViewModel : ViewModel() {
             _loading.value = false
         }
     }
+
+    fun updateExerciseLog(
+        logId: String,
+        newDuration: Int,
+        newIntensity: String,
+        newType: String
+    ) = viewModelScope.launch {
+        if (logId.isBlank() || newDuration <= 0) return@launch
+        _loading.value = true
+
+        val updates = mapOf(
+            "duration" to newDuration,
+            "intensity" to newIntensity,
+            "exerciseType" to newType
+        )
+        try {
+            db.collection("exerciselog").document(logId).update(updates).await()
+        } catch (e: Exception) {
+            println("Error updating exercise log: ${e.message}")
+        } finally {
+            _loading.value = false
+        }
+    }
+
+    fun deleteExerciseLog(logId: String) = viewModelScope.launch {
+        if (logId.isBlank()) return@launch
+        _loading.value = true
+        try {
+            db.collection("exerciselog").document(logId).delete().await()
+        } catch (e: Exception) {
+            println("Error deleting exercise log: ${e.message}")
+        } finally {
+            _loading.value = false
+        }
+    }
 }

@@ -1,9 +1,12 @@
 package com.example.mycardiacrehab.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,6 +39,9 @@ fun ExerciseScreen(
     var type by remember { mutableStateOf("Walk") }
     var duration by remember { mutableStateOf("") }
     var intensity by remember { mutableStateOf("Low") }
+
+    var selectedLog by remember { mutableStateOf<ExerciseLog?>(null) }
+    val showEditDialog = selectedLog != null
 
     val totalDuration = logs.sumOf { it.duration }
     val dateFormatter = remember {
@@ -142,7 +148,11 @@ fun ExerciseScreen(
                     contentPadding = PaddingValues (vertical = 8.dp)
         ) {
             items(logs) { log ->
-                LogItemCard(log = log, dateFormatter = dateFormatter)
+                LogItemCard(
+                    log = log,
+                    dateFormatter = dateFormatter,
+                    onClick = { selectedLog = log }
+                )
             }
             if (logs.isEmpty() && !isLoading) {
                 item {
@@ -154,6 +164,13 @@ fun ExerciseScreen(
                 }
             }
         }
+    }
+    if (showEditDialog) {
+        EditDeleteExerciseDialog(
+            log = selectedLog!!,
+            viewModel = exerciseViewModel,
+            onDismiss = { selectedLog = null }
+        )
     }
 }
 
@@ -187,9 +204,11 @@ fun DropdownMenuSelector(
 }
 
 @Composable
-fun LogItemCard(log: ExerciseLog, dateFormatter: SimpleDateFormat) {
+fun LogItemCard(log: ExerciseLog, dateFormatter: SimpleDateFormat, onClick: (ExerciseLog) -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable{ onClick(log) },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
@@ -220,4 +239,88 @@ fun LogItemCard(log: ExerciseLog, dateFormatter: SimpleDateFormat) {
             )
         }
     }
+}
+
+@Composable
+fun EditDeleteExerciseDialog(
+    log: ExerciseLog,
+    viewModel: ExerciseViewModel,
+    onDismiss: () -> Unit
+) {
+    var newDuration by remember { mutableStateOf(log.duration.toString()) }
+    var newIntensity by remember { mutableStateOf(log.intensity) }
+    var newType by remember { mutableStateOf(log.exerciseType) }
+
+    val isSaving by viewModel.loading.collectAsState()
+    val intensities = listOf("Low", "Medium", "High")
+    val exerciseTypes = listOf("Walk", "Cycle", "Stretching", "Light Resistance")
+
+    val isSaveEnabled = newDuration.toIntOrNull() != null && newDuration.toIntOrNull()!! > 0
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit or Delete Activity") },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Editing: ${log.exerciseType} logged on ${SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(log.timestamp.toDate())}",
+                    style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = newDuration,
+                    onValueChange = { newDuration = it.filter { char -> char.isDigit() } },
+                    label = { Text("Duration (minutes)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceAround
+                ) {
+                    DropdownMenuSelector(options = exerciseTypes, selectedOption = newType, onOptionSelected = { newType = it })
+                    DropdownMenuSelector(options = intensities, selectedOption = newIntensity, onOptionSelected = { newIntensity = it })
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val durationInt = newDuration.toIntOrNull()
+                    if (durationInt != null && durationInt > 0) {
+                        viewModel.updateExerciseLog(log.id, durationInt, newIntensity, newType)
+                        onDismiss()
+                    }
+                },
+                enabled = isSaveEnabled && !isSaving
+            ) {
+                if (isSaving) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                } else {
+                    Text("SAVE CHANGES")
+                }
+            }
+        },
+        dismissButton = {
+            Row {
+                // Delete Button (Secondary action)
+                TextButton(
+                    onClick = {
+                        viewModel.deleteExerciseLog(log.id)
+                        onDismiss()
+                    }
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                    Spacer(Modifier.width(4.dp))
+                    Text("DELETE", color = MaterialTheme.colorScheme.error)
+                }
+                Spacer(Modifier.width(8.dp))
+                // Cancel Button
+                OutlinedButton(onClick = onDismiss) {
+                    Text("CANCEL")
+                }
+            }
+        }
+    )
 }
