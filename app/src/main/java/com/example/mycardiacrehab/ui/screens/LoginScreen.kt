@@ -83,12 +83,16 @@ fun LoginScreen(
                         "Login",
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.align(Alignment.Start)
+                        modifier = Modifier.align(Alignment.Start),
+                        color = Color.Black
                     )
                     Row(
                         modifier = Modifier.align(Alignment.Start)
                     ) {
-                        Text("Don't have an account? ")
+                        Text(
+                            "Don't have an account? ",
+                            color = Color.Black
+                            )
                         TextButton(
                             onClick = onNavigateToSignUp,
                             contentPadding = PaddingValues(0.dp),

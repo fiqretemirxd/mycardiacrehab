@@ -75,7 +75,8 @@ fun SignUpScreen(
                     Text(
                         "Sign up",
                         style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
                     )
                 }
 
@@ -85,7 +86,10 @@ fun SignUpScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Already have an account? ")
+                    Text(
+                        "Already have an account? ",
+                        color = Color.Black
+                    )
                     TextButton(
                         onClick = onNavigateToLogin,
                         contentPadding = PaddingValues(0.dp),
@@ -138,7 +142,11 @@ fun SignUpScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Checkbox(checked = isProvider, onCheckedChange = { isProvider = it })
-                    Text("Register as Healthcare Provider (Requires Approval)", style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        "Register as Healthcare Provider (Requires Approval)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Black
+                        )
                 }
                 // Removed Spacer(Modifier.height(24.dp))
 
