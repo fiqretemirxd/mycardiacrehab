@@ -67,4 +67,42 @@ class JournalViewModel : ViewModel() {
             _loading.value = false
         }
     }
+
+    fun updateEntry(
+        entryId: String,
+        newMood: String,
+        newSymptoms: String,
+        newFreeText: String
+    ) = viewModelScope.launch {
+        if (entryId.isBlank()) return@launch
+        _loading.value = true
+
+        val updates = mapOf(
+            "mood" to newMood,
+            "symptoms" to newSymptoms.ifBlank { null }, // Save null if blank
+            "freeTextEntry" to newFreeText
+        )
+
+        try {
+            db.collection("patientjournal").document(entryId).update(updates).await()
+        } catch (e: Exception) {
+            println("Error updating journal entry: ${e.message}")
+        } finally {
+            _loading.value = false
+        }
+    }
+
+    // 🟢 NEW: Implement Delete (D)
+    fun deleteEntry(entryId: String) = viewModelScope.launch {
+        if (entryId.isBlank()) return@launch
+        _loading.value = true
+
+        try {
+            db.collection("patientjournal").document(entryId).delete().await()
+        } catch (e: Exception) {
+            println("Error deleting journal entry: ${e.message}")
+        } finally {
+            _loading.value = false
+        }
+    }
 }

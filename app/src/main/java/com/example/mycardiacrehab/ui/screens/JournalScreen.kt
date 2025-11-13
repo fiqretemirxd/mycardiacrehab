@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.*
@@ -40,6 +41,10 @@ fun JournalScreen(
     val entries by journalViewModel.entries.collectAsState()
     val isLoading by journalViewModel.loading.collectAsState()
     var isLoggingVisible by remember { mutableStateOf(false) }
+
+    // State for Edit/Delete Dialog
+    var selectedEntry by remember { mutableStateOf<JournalEntry?>(null) }
+    val showEditDialog = selectedEntry != null
 
     Column(
         modifier = Modifier
@@ -78,7 +83,7 @@ fun JournalScreen(
             )
         }
 
-        Text("Past Entries", style = MaterialTheme.typography.titleLarge)
+        Text("Past Entries (Tap to Edit)", style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(8.dp))
 
         LazyColumn(
@@ -86,12 +91,25 @@ fun JournalScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             items(entries) { entry ->
-                JournalEntryCard(entry = entry)
+                // Passes the onClick lambda to trigger edit
+                JournalEntryCard(
+                    entry = entry,
+                    onClick = { selectedEntry = entry }
+                )
             }
             if (entries.isEmpty() && !isLoading) {
                 item { Text("No entries yet. Click '+' to log a first entry.", color = MaterialTheme.colorScheme.outline) }
             }
         }
+    }
+
+    // Dialog logic
+    if (showEditDialog && selectedEntry != null) {
+        EditDeleteJournalDialog(
+            entry = selectedEntry!!,
+            viewModel = journalViewModel,
+            onDismiss = { selectedEntry = null }
+        )
     }
 }
 
@@ -110,7 +128,8 @@ fun JournalEntryForm(viewModel: JournalViewModel, currentUserId: String, onEntry
         Column(Modifier.padding(16.dp)) {
             Text("How are you feeling today?", style = MaterialTheme.typography.titleMedium)
 
-            DropdownMenuSelector(options = moods, selectedOption = mood, onOptionSelected = { mood = it })
+            // Use the renamed private function
+            JournalDropdownMenuSelector(options = moods, selectedOption = mood, onOptionSelected = { mood = it })
             Spacer(modifier = Modifier.height(8.dp))
 
             OutlinedTextField(
@@ -148,14 +167,14 @@ fun JournalEntryForm(viewModel: JournalViewModel, currentUserId: String, onEntry
 }
 
 @Composable
-fun JournalEntryCard(entry: JournalEntry) {
+fun JournalEntryCard(entry: JournalEntry, onClick: (JournalEntry) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     val dateFormatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { expanded = !expanded },
+            .clickable { onClick(entry) },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(Modifier.padding(12.dp)) {
@@ -171,11 +190,14 @@ fun JournalEntryCard(entry: JournalEntry) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(entry.mood, style = MaterialTheme.typography.labelLarge)
                     Spacer(modifier = Modifier.width(4.dp))
-                    Icon(
-                        imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = "Expand",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+
+                    IconButton(onClick = { expanded = !expanded }, modifier = Modifier.size(24.dp)) {
+                        Icon(
+                            imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = "Expand",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
 
@@ -200,23 +222,112 @@ fun JournalEntryCard(entry: JournalEntry) {
     }
 }
 
+@Composable
+fun EditDeleteJournalDialog(
+    entry: JournalEntry,
+    viewModel: JournalViewModel,
+    onDismiss: () -> Unit
+) {
+    var newMood by remember { mutableStateOf(entry.mood) }
+    var newSymptoms by remember { mutableStateOf(entry.symptoms ?: "") }
+    var newFreeText by remember { mutableStateOf(entry.freeTextEntry) }
 
+    val moods = listOf("Happy", "Neutral", "Tired", "Anxious", "Stressed", "Sad")
+    val isSaving by viewModel.loading.collectAsState()
 
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit Journal Entry") },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                val dateFormatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+                Text("Entry on ${dateFormatter.format(entry.entryDate.toDate())}",
+                    style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.height(16.dp))
 
+                Text("How are you feeling?", style = MaterialTheme.typography.bodyMedium)
+                // Use the renamed private function
+                JournalDropdownMenuSelector(options = moods, selectedOption = newMood, onOptionSelected = { newMood = it })
+                Spacer(Modifier.height(8.dp))
 
+                OutlinedTextField(
+                    value = newSymptoms,
+                    onValueChange = { newSymptoms = it },
+                    label = { Text("Symptoms") },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp)
+                )
+                Spacer(Modifier.height(8.dp))
 
+                OutlinedTextField(
+                    value = newFreeText,
+                    onValueChange = { newFreeText = it },
+                    label = { Text("General Notes") },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 80.dp)
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    viewModel.updateEntry(entry.id, newMood, newSymptoms, newFreeText)
+                    onDismiss()
+                },
+                enabled = !isSaving
+            ) {
+                if (isSaving) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                } else {
+                    Text("SAVE CHANGES")
+                }
+            }
+        },
+        dismissButton = {
+            Row {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteEntry(entry.id)
+                        onDismiss()
+                    }
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                    Spacer(Modifier.width(4.dp))
+                    Text("DELETE", color = MaterialTheme.colorScheme.error)
+                }
+                Spacer(Modifier.width(8.dp))
+                OutlinedButton(onClick = onDismiss) {
+                    Text("CANCEL")
+                }
+            }
+        }
+    )
+}
 
+// 🟢 RENAMED AND PRIVATE to avoid conflicting with ExerciseScreen.kt
+@Composable
+private fun JournalDropdownMenuSelector(
+    options: List<String>,
+    selectedOption: String,
+    onOptionSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+    Box(Modifier.wrapContentSize(Alignment.TopStart)) {
+        OutlinedButton(onClick = { expanded = true }) {
+            Text(selectedOption)
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option) },
+                    onClick = {
+                        onOptionSelected(option)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
