@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import java.util.Date
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.ListenerRegistration // Ensure this is imported
+import kotlinx.coroutines.tasks.await
 
 class AppointmentViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
@@ -239,5 +240,30 @@ class AppointmentViewModel : ViewModel() {
     fun cancelAppointment(appointmentId: String) {
         db.collection("appointments").document(appointmentId)
             .update("status", "cancelled")
+    }
+
+    fun updateAppointment(
+        appointmentId: String,
+        newDateTime: Timestamp,
+        newMode: String,
+        newNotes: String
+    ) = viewModelScope.launch {
+        if (appointmentId.isBlank()) return@launch
+        _isLoading.value = true
+
+        val updates = mapOf(
+            "appointmentDateTime" to newDateTime,
+            "mode" to newMode,
+            "notes" to newNotes,
+            "status" to "scheduled"
+        )
+
+        try {
+            db.collection("appointments").document(appointmentId).update(updates).await()
+        } catch (e: Exception) {
+            println("Error updating appointment: ${e.message}")
+        } finally {
+            _isLoading.value = false
+        }
     }
 }
