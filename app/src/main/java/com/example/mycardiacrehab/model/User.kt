@@ -16,6 +16,7 @@ data class User(
     val emergencyContactName: String? = null,
     val emergencyContactNumber: String? = null,
 
+    var isActive: Boolean = true,
 
     @ServerTimestamp
     val createdAt: Date? = null

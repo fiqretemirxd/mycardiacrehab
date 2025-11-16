@@ -1,19 +1,26 @@
 package com.example.mycardiacrehab.ui.screens
 
 import android.os.Build
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mycardiacrehab.model.* // Import all data models
@@ -35,13 +42,19 @@ fun PatientDetailScreen(
     journalViewModel: JournalViewModel = viewModel(),
     chatbotViewModel: ChatbotViewModel = viewModel()
 ) {
+    var showArchiveDialog by remember { mutableStateOf(false) }
+
     // Load all data streams for the specific patient ID
     LaunchedEffect(patientId) {
+        providerViewModel.loadUserProfile(patientId)
         exerciseViewModel.loadExerciseHistory(patientId)
         medicationViewModel.loadDailySchedule(patientId)
         journalViewModel.loadJournalHistory(patientId)
         chatbotViewModel.loadChatHistory(patientId)
     }
+
+    val patientProfile by providerViewModel.currentPatientProfile.collectAsState()
+    val isArchiving by providerViewModel.loading.collectAsState()
 
     // 🟢 FIX: Collect all data states using 'by' delegation for correct usage
     val exerciseLogs by exerciseViewModel.logs.collectAsState()
@@ -56,8 +69,30 @@ fun PatientDetailScreen(
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         item {
-            Text("Patient ID: $patientId", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
-            Text("Detailed Rehabilitation Dashboard", style = MaterialTheme.typography.titleMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        // Display name from the profile object
+                        patientProfile?.fullName ?: "Loading Patient...",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text("Detailed Rehabilitation Dashboard", style = MaterialTheme.typography.titleMedium)
+                }
+
+                // 🟢 NEW: Archive Button
+                IconButton(
+                    onClick = { showArchiveDialog = true },
+                    // Disable if saving or if the profile isn't loaded yet
+                    enabled = !isArchiving && patientProfile != null
+                ) {
+                    Icon(Icons.Default.Archive, contentDescription = "Archive Patient", tint = MaterialTheme.colorScheme.error)
+                }
+            }
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
         }
 
@@ -89,12 +124,63 @@ fun PatientDetailScreen(
             ChatLogSummary(chatMessages.takeLast(5))
         }
     }
+
+    if (showArchiveDialog && patientProfile != null) {
+        ArchiveConfirmationDialog(
+            patientName = patientProfile!!.fullName,
+            patientId = patientId,
+            viewModel = providerViewModel,
+            onDismiss = { showArchiveDialog = false }
+        )
+    }
 }
 
-// -------------------------------------------------------------------------------------------------
-// Data Visualization Helpers
-// -------------------------------------------------------------------------------------------------
-// ... (All helper functions remain the same as they were correctly defined outside the error zone) ...
+@Composable
+fun ArchiveConfirmationDialog(
+    patientName: String,
+    patientId: String,
+    viewModel: ProviderViewModel,
+    onDismiss: () -> Unit
+) {
+    val isArchiving by viewModel.loading.collectAsState()
+    val context = LocalContext.current
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Archive Patient: $patientName") },
+        text = {
+            Text(
+                "Are you sure you want to archive this patient? " +
+                        "This action will remove the patient from your active list " +
+                        "and preserve their historical data."
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    viewModel.archivePatient(patientId)
+                    onDismiss()
+                    Toast.makeText(
+                        context,
+                        "$patientName archived successfully.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                },
+                enabled = !isArchiving,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                if (isArchiving) CircularProgressIndicator(modifier = Modifier.size(24.dp)) else Text(
+                    "CONFIRM ARCHIVE"
+                )
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) {
+                Text("CANCEL")
+            }
+        }
+    )
+}
 
 @Composable
 fun DataSectionTitle(title: String) {

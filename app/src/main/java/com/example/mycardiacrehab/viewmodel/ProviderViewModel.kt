@@ -19,6 +19,9 @@ class ProviderViewModel : ViewModel() {
     private val _providerProfile = MutableStateFlow<User?>(null)
     val providerProfile: StateFlow<User?> = _providerProfile
 
+    private val _currentPatientProfile = MutableStateFlow<User?>(null)
+    val currentPatientProfile: StateFlow<User?> = _currentPatientProfile
+
     private val _loading = MutableStateFlow(false)
     val loading: StateFlow<Boolean> = _loading
 
@@ -27,6 +30,7 @@ class ProviderViewModel : ViewModel() {
         try {
             val snapshot = db.collection("users")
                 .whereEqualTo("userType", "patient")
+                .whereEqualTo("isActive", true)
                 .get().await()
             _patients.value = snapshot.toObjects(User::class.java)
         } catch (e: Exception) {
@@ -48,6 +52,34 @@ class ProviderViewModel : ViewModel() {
         } catch (e: Exception) {
             println("Error loading provider profile: ${e.message}")
             // Handle error, maybe set profile to null or an error state
+        }
+    }
+
+    fun loadUserProfile(patientId: String) = viewModelScope.launch {
+        if (patientId.isBlank()) return@launch
+        _loading.value = true
+        try {
+            val document = db.collection("users").document(patientId).get().await()
+            _currentPatientProfile.value = document.toObject(User::class.java)
+        } catch (e: Exception) {
+            println("Error loading patient profile: ${e.message}")
+        } finally {
+            _loading.value = false
+        }
+    }
+
+    fun archivePatient(patientId: String) = viewModelScope.launch {
+        if (patientId.isBlank()) return@launch
+        _loading.value = true
+        try {
+            db.collection("users").document(patientId)
+                .update("isActive", false)
+                .await()
+            loadPatients() // Refresh the list after archiving
+        } catch (e: Exception) {
+            println("Error archiving patient: ${e.message}")
+        } finally {
+            _loading.value = false
         }
     }
 }
