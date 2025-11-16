@@ -245,6 +245,7 @@ fun ProviderAppointmentScreen(
     if (selectedAppointment != null) {
         EditDeleteAppointmentDialog(
             appointment = selectedAppointment!!,
+            patientName = selectedPatient?.fullName ?: "N/A",
             viewModel = appointmentViewModel,
             onDismiss = { selectedAppointment = null }
         )
@@ -328,6 +329,7 @@ fun ProviderAppointmentCard(appointment: Appointment, onClick: () -> Unit) {
 @Composable
 fun EditDeleteAppointmentDialog(
     appointment: Appointment,
+    patientName: String,
     viewModel: AppointmentViewModel,
     onDismiss: () -> Unit
 ) {
@@ -347,6 +349,7 @@ fun EditDeleteAppointmentDialog(
         context,
         { _, year, month, dayOfMonth ->
             newDate.set(year, month, dayOfMonth)
+            newDate = newDate.clone() as Calendar
         },
         newDate.get(Calendar.YEAR),
         newDate.get(Calendar.MONTH),
@@ -370,24 +373,39 @@ fun EditDeleteAppointmentDialog(
         text = {
             Column {
                 Text(
-                    "Patient: ${appointment.providerName}",
-                    style = MaterialTheme.typography.bodySmall
-                )
+                    "Patient: $patientName",
+                    style = MaterialTheme.typography.bodySmall)
                 Spacer(Modifier.height(8.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     Box(modifier = Modifier.weight(1f)) {
                         OutlinedTextField(
                             value = dateFormatter.format(newDate.time),
-                            onValueChange = { }, readOnly = true, label = { Text("Date") },
-                            modifier = Modifier.fillMaxWidth().clickable { datePickerDialog.show() }
+                            onValueChange = { },
+                            readOnly = true,
+                            label = { Text("Date") },
+                            leadingIcon = {Icon(Icons.Default.CalendarMonth, contentDescription = "Date")},
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .clickable { datePickerDialog.show() }
                         )
                     }
                     Box(modifier = Modifier.weight(1f)) {
                         OutlinedTextField(
                             value = timeFormatter.format(newTime.time),
-                            onValueChange = { }, readOnly = true, label = { Text("Time") },
-                            modifier = Modifier.fillMaxWidth().clickable { timePickerDialog.show() }
+                            onValueChange = { },
+                            readOnly = true,
+                            label = { Text("Time") },
+                            leadingIcon = {Icon(Icons.Default.Schedule, contentDescription = "Time")},
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .clickable { timePickerDialog.show() }
                         )
                     }
                 }
