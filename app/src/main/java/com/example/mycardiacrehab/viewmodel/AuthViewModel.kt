@@ -2,6 +2,7 @@ package com.example.mycardiacrehab.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.mycardiacrehab.BuildConfig
 import com.example.mycardiacrehab.model.User
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -80,13 +81,27 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    fun signUp(email: String, password: String, fullName: String, isProvider: Boolean = false) = viewModelScope.launch {
+    fun signUp(
+        email: String,
+        password: String,
+        fullName: String,
+        isProvider: Boolean = false,
+        providerCode: String
+
+        ) = viewModelScope.launch {
         _authState.value = AuthState.Loading
         try {
+            var userType = "patient"
+            if (isProvider) {
+                if (providerCode == BuildConfig.PROVIDER_SECRET_CODE) {
+                    userType = "provider"
+                } else {
+                    _authState.value = AuthState.Error("Sign Up Failed: Invalid Provider Code.")
+                    return@launch
+                }
+            }
             val userCredential = auth.createUserWithEmailAndPassword(email, password).await()
             val userId = userCredential.user?.uid ?: throw Exception("User ID is null after creation")
-
-            val userType = if (isProvider) "provider" else "patient"
 
             val user = User(
                 // Using 'uid' to match the User data class property

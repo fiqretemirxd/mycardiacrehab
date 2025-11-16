@@ -1,5 +1,6 @@
 package com.example.mycardiacrehab.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -33,6 +34,7 @@ fun SignUpScreen(
     var password by remember { mutableStateOf("") }
     var fullName by remember { mutableStateOf("") }
     var isProvider by remember { mutableStateOf(false) }
+    var providerCode by remember { mutableStateOf("") }
 
     val authState by viewModel.authState.collectAsState()
 
@@ -143,19 +145,32 @@ fun SignUpScreen(
                 ) {
                     Checkbox(checked = isProvider, onCheckedChange = { isProvider = it })
                     Text(
-                        "Register as Healthcare Provider (Requires Approval)",
+                        "Register as Healthcare Provider",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.Black
                         )
                 }
-                // Removed Spacer(Modifier.height(24.dp))
 
+                AnimatedVisibility(visible = isProvider) {
+                    OutlinedTextField(
+                        value = providerCode,
+                        onValueChange = { providerCode = it },
+                        label = { Text("Provider Secret Code") },
+                        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Provider Code") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                    )
+                }
                 // --- Register Button ---
                 Button(
                     onClick = {
-                        viewModel.signUp(email, password, fullName, isProvider)
+                        viewModel.signUp(email, password, fullName, isProvider, providerCode)
                     },
-                    enabled = authState != AuthViewModel.AuthState.Loading && fullName.isNotBlank() && password.length >= 6,
+                    enabled = authState != AuthViewModel.AuthState.Loading &&
+                            fullName.isNotBlank() &&
+                            password.length >= 6 &&
+                            (!isProvider || (providerCode.isNotBlank())),
                     modifier = Modifier.fillMaxWidth().height(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = primaryBlue)
                 ) {

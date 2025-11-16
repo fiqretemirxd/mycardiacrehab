@@ -18,6 +18,8 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "GEMINI_API_KEY", "\"AIzaSyBbYZ3T88Ywv4yG1gLEmq7bMowrqP2nSTw\"")
+
+        buildConfigField("String", "PROVIDER_SECRET_CODE", "\"1234abcd\"")
     }
 
     buildTypes {
