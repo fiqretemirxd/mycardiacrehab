@@ -16,6 +16,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.mycardiacrehab.ui.screens.AdminDashboardScreen
 import com.example.mycardiacrehab.ui.screens.SplashScreen
 import com.example.mycardiacrehab.ui.screens.LoginScreen
 import com.example.mycardiacrehab.ui.screens.PatientDashboardScreen
@@ -79,6 +80,9 @@ class MainActivity : ComponentActivity() {
                         composable("provider_dashboard") {
                             ProviderDashboardScreen(authViewModel = authViewModel)
                         }
+                        composable("admin_dashboard") {
+                            AdminDashboardScreen(authViewModel = authViewModel)
+                        }
                     }
 
                     // This state observer logic for redirection remains the same
@@ -87,6 +91,7 @@ class MainActivity : ComponentActivity() {
                             val destination = when (state.userType) {
                                 "patient" -> "patient_dashboard"
                                 "provider" -> "provider_dashboard"
+                                "admin" -> "admin_dashboard"
                                 else -> "login" // Default fallback
                             }
                             navController.navigate(destination) {
