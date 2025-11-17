@@ -35,8 +35,10 @@ class AuthViewModel : ViewModel() {
             if (user != null) {
                 fetchUserType(user.uid)
             } else {
-                _authState.value = AuthState.Unauthenticated
-                _currentUser.value = null // Also clear the user details on logout
+                if (_authState.value !is AuthState.Error) {
+                    _authState.value = AuthState.Unauthenticated
+                    _currentUser.value = null // Also clear the user details on logout
+                }
             }
         }
     }
@@ -64,6 +66,13 @@ class AuthViewModel : ViewModel() {
 
         try {
             val userDoc = db.collection("users").document(userId).get().await()
+            val isActive = userDoc.getBoolean("isActive") ?: true
+            if (!isActive) {
+                auth.signOut()
+                _authState.value = AuthState.Error("Account pending approval or suspend.")
+                _currentUser.value = null
+            }
+
             val userType = userDoc.getString("userType") ?: "patient"
 
             val userObject = userDoc.toObject(User::class.java)?.copy(userId = userId)

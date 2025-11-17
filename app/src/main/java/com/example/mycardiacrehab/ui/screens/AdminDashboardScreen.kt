@@ -10,9 +10,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -23,6 +21,12 @@ import com.example.mycardiacrehab.model.User
 import com.example.mycardiacrehab.viewmodel.AdminViewModel
 import com.example.mycardiacrehab.viewmodel.AuthViewModel
 
+// Define constants for the tabs
+enum class UserTab(val title: String) {
+    PATIENTS("Patients"),
+    PROVIDERS("Providers")
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminDashboardScreen(
@@ -32,6 +36,18 @@ fun AdminDashboardScreen(
     val users by adminViewModel.users.collectAsState()
     val pendingProviders by adminViewModel.pendingProviders.collectAsState()
     val isLoading by adminViewModel.isLoading.collectAsState()
+
+    var selectedTab by remember { mutableStateOf(UserTab.PATIENTS) }
+
+    // Filter users based on the selected tab
+    val filteredUsers = remember(users, selectedTab) {
+        users.filter { user ->
+            when (selectedTab) {
+                UserTab.PATIENTS -> user.userType == "patient"
+                UserTab.PROVIDERS -> user.userType == "provider"
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -55,56 +71,79 @@ fun AdminDashboardScreen(
             )
         }
     ) { padding ->
-        if (isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else {
-            LazyColumn(
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier
-                    .padding(padding)
-                    .fillMaxSize()
-            ) {
-                // --- SECTION 1: PENDING APPROVALS ---
-                if (pendingProviders.isNotEmpty()) {
-                    item {
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+        ) {
+
+            // --- SECTION 1: PENDING APPROVALS ---
+            if (pendingProviders.isNotEmpty()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0)), // Light Orange
+                    elevation = CardDefaults.cardElevation(4.dp)
+                ) {
+                    Column(Modifier.padding(16.dp)) {
                         Text(
-                            "⚠️ Pending Provider Approvals",
+                            "⚠️ ${pendingProviders.size} Pending Provider Approvals",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.error,
                             fontWeight = FontWeight.Bold
                         )
+                        Spacer(Modifier.height(8.dp))
+                        // Show a condensed list of pending providers
+                        pendingProviders.take(3).forEach { provider ->
+                            PendingProviderItem(
+                                user = provider,
+                                onApprove = { adminViewModel.approveProvider(provider) }
+                            )
+                        }
                     }
-                    items(pendingProviders) { provider ->
-                        PendingProviderCard(
-                            user = provider,
-                            onApprove = { adminViewModel.approveProvider(provider) }
-                        )
-                    }
-                    item {
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    }
-                } else {
-                    // Optional: Message when no pending approvals
-                    // item { Text("No pending approvals.", color = Color.Gray) }
                 }
+            }
 
-                // --- SECTION 2: ALL USERS ---
-                item {
-                    Text(
-                        "All Users (${users.size})",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+            // --- SECTION 2: TABS FOR USER MANAGEMENT ---
+            TabRow(
+                selectedTabIndex = selectedTab.ordinal,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                UserTab.entries.forEach { tab ->
+                    Tab(
+                        selected = selectedTab == tab,
+                        onClick = { selectedTab = tab },
+                        text = { Text(tab.title) },
+                        selectedContentColor = MaterialTheme.colorScheme.primary,
+                        unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                if (users.isEmpty()) {
+            }
+
+            // --- SECTION 3: USER LIST CONTENT ---
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(Modifier.padding(top = 32.dp))
+                }
+            } else if (filteredUsers.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No ${selectedTab.title.lowercase()} found.", color = Color.Gray)
+                }
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
                     item {
-                        Text("No users found.", color = Color.Gray)
+                        Text(
+                            "${selectedTab.title} (${filteredUsers.size})",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
-                } else {
-                    items(users) { user ->
+                    items(filteredUsers, key = { it.userId }) { user ->
                         AdminUserCard(
                             user = user,
                             onToggleStatus = { adminViewModel.toggleUserStatus(user) },
@@ -117,39 +156,28 @@ fun AdminDashboardScreen(
     }
 }
 
+// Condensed view for inside the main Pending Card
 @Composable
-fun PendingProviderCard(user: User, onApprove: () -> Unit) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0)), // Light Orange
-        elevation = CardDefaults.cardElevation(4.dp),
-        modifier = Modifier.fillMaxWidth()
+fun PendingProviderItem(user: User, onApprove: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Text(
+            user.fullName.ifBlank { "Unknown" },
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f)
+        )
+        TextButton(
+            onClick = onApprove,
+            contentPadding = PaddingValues(horizontal = 8.dp),
+            modifier = Modifier.height(30.dp),
+            colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFE65100))
         ) {
-            Icon(
-                Icons.Default.Person,
-                contentDescription = null,
-                tint = Color(0xFFE65100) // Dark Orange
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(user.fullName.ifBlank { "Unknown Name" }, fontWeight = FontWeight.Bold)
-                Text(user.email, style = MaterialTheme.typography.bodySmall)
-                Text(
-                    "Requested Role: PROVIDER",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFFE65100),
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            Button(
-                onClick = onApprove,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)) // Green
-            ) {
-                Text("Approve")
-            }
+            Text("APPROVE")
         }
     }
 }
@@ -196,7 +224,7 @@ fun AdminUserCard(user: User, onToggleStatus: () -> Unit, onDelete: () -> Unit) 
                     if (!user.isActive) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "(INACTIVE/BANNED)",
+                            text = "(SUSPENDED)",
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold
@@ -207,31 +235,44 @@ fun AdminUserCard(user: User, onToggleStatus: () -> Unit, onDelete: () -> Unit) 
 
             // Actions
             Column(horizontalAlignment = Alignment.End) {
+                // Button 1: Suspend / Activate (Toggle Status)
                 Button(
                     onClick = onToggleStatus,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (user.isActive) MaterialTheme.colorScheme.error else Color(0xFF4CAF50)
+                        // If active -> Orange button (to suspend). If inactive -> Green button (to activate)
+                        containerColor = if (user.isActive) Color(0xFFFF9800) else Color(0xFF4CAF50)
                     ),
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
                     modifier = Modifier.height(36.dp)
                 ) {
                     Text(
-                        if (user.isActive) "Delete" else "Approve",
-                        style = MaterialTheme.typography.labelSmall
+                        text = if (user.isActive) "Suspend" else "Activate",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White
                     )
                 }
 
-                // Optional Delete button (Comment out if too dangerous)
-
                 Spacer(modifier = Modifier.height(4.dp))
+
+                // Button 2: Permanent Delete (Set to Red)
                 TextButton(
                     onClick = onDelete,
                     contentPadding = PaddingValues(0.dp),
                     modifier = Modifier.height(24.dp)
                 ) {
-                    Text("Delete", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Delete Permanently",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        "Remove",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelSmall
+                    )
                 }
-
             }
         }
     }

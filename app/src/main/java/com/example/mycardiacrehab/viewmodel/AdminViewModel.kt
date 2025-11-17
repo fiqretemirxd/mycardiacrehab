@@ -53,8 +53,12 @@ class AdminViewModel : ViewModel() {
 
     fun approveProvider(user: User) = viewModelScope.launch {
         try {
+            val updates = hashMapOf(
+                "isActive" to true,
+                "active" to com.google.firebase.firestore.FieldValue.delete()
+            )
             db.collection("users").document(user.userId)
-                .update("isActive", true)
+                .update(updates)
                 .await()
 
             loadAllUsers()
