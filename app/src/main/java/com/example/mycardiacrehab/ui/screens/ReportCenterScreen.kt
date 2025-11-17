@@ -2,8 +2,9 @@ package com.example.mycardiacrehab.ui.screens
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color as AndroidColor // 🟢 Import with alias
+import android.graphics.Color as AndroidColor
 import android.graphics.Paint
+import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import android.os.Build
 import android.widget.Toast
@@ -13,9 +14,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Share // 🟢 Use Share icon
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,17 +23,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.collectAsState
-import androidx.core.content.FileProvider // 🟢 Import
+import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mycardiacrehab.model.PatientReport
 import com.example.mycardiacrehab.model.User
 import com.example.mycardiacrehab.viewmodel.ProviderViewModel
 import com.example.mycardiacrehab.viewmodel.ReportViewModel
-import java.io.File // 🟢 Import
-import java.io.FileOutputStream // 🟢 Import
+import java.io.File
+import java.io.FileOutputStream
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import java.text.SimpleDateFormat
+import java.util.*
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -41,7 +42,6 @@ fun ReportCenterScreen(
     providerViewModel: ProviderViewModel = viewModel(),
     reportViewModel: ReportViewModel = viewModel()
 ) {
-    // ... (existing state observations) ...
     val patients by providerViewModel.patients.collectAsState()
     val isLoadingPatients by providerViewModel.loading.collectAsState()
     val report by reportViewModel.report.collectAsState()
@@ -60,7 +60,7 @@ fun ReportCenterScreen(
         Text("Report Generation Center", style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(16.dp))
 
-        // 1. Patient Selection
+        // Patient Selection
         PatientSelectionDropdown(
             patients = patients,
             selectedPatient = selectedPatient,
@@ -70,7 +70,7 @@ fun ReportCenterScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        // 2. Generate Report Button
+        // Generate Report Button
         Button(
             onClick = {
                 selectedPatient?.let {
@@ -94,7 +94,7 @@ fun ReportCenterScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        // 3. Report Display
+        // Report Display
         if (isLoadingReport) {
             CircularProgressIndicator()
         } else if (report != null) {
@@ -102,7 +102,7 @@ fun ReportCenterScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            // 🟢 UPDATED: PDF Share Button
+            // PDF Share Button
             Button(
                 onClick = {
                     selectedPatient?.let { patient ->
@@ -124,80 +124,223 @@ fun ReportCenterScreen(
     }
 }
 
-// 🟢 NEW HELPER FUNCTION: Contains your PDF logic, but saves to cache and shares
+// ✅ ENHANCED PDF GENERATION FUNCTION
 @RequiresApi(Build.VERSION_CODES.O)
 private fun generateAndSharePdf(context: Context, report: PatientReport, patient: User) {
     val pdfDocument = PdfDocument()
-    val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create() // A4
+    val pageWidth = 595 // A4 width in points
+    val pageHeight = 842 // A4 height in points
+    val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).create()
     val page = pdfDocument.startPage(pageInfo)
     val canvas = page.canvas
 
-    val paint = Paint().apply {
-        textSize = 18f
-        isFakeBoldText = true
+    // Margins
+    val leftMargin = 60f
+    val rightMargin = 535f
+    var yPosition = 60f
+    val lineHeight = 25f
+
+    // Title Paint
+    val titlePaint = Paint().apply {
+        textSize = 24f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        color = AndroidColor.rgb(0, 105, 92) // Teal color
+    }
+
+    // Header Paint
+    val headerPaint = Paint().apply {
+        textSize = 16f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         color = AndroidColor.BLACK
     }
-    canvas.drawText("Weekly Patient Report", 60f, 80f, paint)
 
-    paint.textSize = 14f
-    paint.isFakeBoldText = false
-    var yPosition = 120f
-    val lineSpacing = 25f
-
-    // Use the same formatter as the ReportCard
-    val dateFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
-
-    val lines = listOf(
-        "Patient: ${report.patientName}",
-        // 🟢 FIX: Format the LocalDate objects
-        "Period: ${report.startDate.format(dateFormatter)} to ${report.endDate.format(dateFormatter)}",
-        "Generated: ${report.dateGenerated.format(dateFormatter)}",
-        "",
-        "Total Exercise: ${report.totalExerciseMinutes} min",
-        "Exercise Compliance: ${report.exerciseComplianceRate}%",
-        "Medication Adherence: ${report.medicationAdherenceRate}%",
-        "Common Symptom: ${report.mostCommonSymptoms}",
-        "",
-        "AI Chatbot Audit:",
-        "Total Chats: ${report.totalChatInteractions}",
-        "Out-of-Scope Flags: ${report.outOfScopeInteractions}"
-    )
-
-    for (line in lines) {
-        canvas.drawText(line, 60f, yPosition, paint)
-        yPosition += lineSpacing
+    // Body Paint
+    val bodyPaint = Paint().apply {
+        textSize = 12f
+        color = AndroidColor.DKGRAY
     }
 
-    pdfDocument.finishPage(page)
+    // Value Paint (for metrics)
+    val valuePaint = Paint().apply {
+        textSize = 12f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        color = AndroidColor.BLACK
+    }
+
+    // Date formatter
+    val dateFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
 
     try {
-        // 1. Create a directory in the app's cache
+        // ===== TITLE =====
+        canvas.drawText("WEEKLY PATIENT REPORT", leftMargin, yPosition, titlePaint)
+        yPosition += 35f
+
+        // Draw a line under title
+        val linePaint = Paint().apply {
+            strokeWidth = 2f
+            color = AndroidColor.rgb(0, 105, 92)
+        }
+        canvas.drawLine(leftMargin, yPosition, rightMargin, yPosition, linePaint)
+        yPosition += 25f
+
+        // ===== PATIENT INFORMATION =====
+        canvas.drawText("Patient Information", leftMargin, yPosition, headerPaint)
+        yPosition += lineHeight
+
+        canvas.drawText("Name:", leftMargin + 20f, yPosition, bodyPaint)
+        canvas.drawText(report.patientName, leftMargin + 150f, yPosition, valuePaint)
+        yPosition += lineHeight
+
+        canvas.drawText("Patient ID:", leftMargin + 20f, yPosition, bodyPaint)
+        canvas.drawText(report.patientId.take(8) + "...", leftMargin + 150f, yPosition, valuePaint)
+        yPosition += lineHeight
+
+        canvas.drawText("Report Period:", leftMargin + 20f, yPosition, bodyPaint)
+        canvas.drawText(
+            "${report.startDate.format(dateFormatter)} to ${report.endDate.format(dateFormatter)}",
+            leftMargin + 150f,
+            yPosition,
+            valuePaint
+        )
+        yPosition += lineHeight
+
+        canvas.drawText("Generated On:", leftMargin + 20f, yPosition, bodyPaint)
+        canvas.drawText(report.dateGenerated.format(dateFormatter), leftMargin + 150f, yPosition, valuePaint)
+        yPosition += 35f
+
+        // ===== REHABILITATION METRICS =====
+        canvas.drawText("Rehabilitation Metrics", leftMargin, yPosition, headerPaint)
+        yPosition += lineHeight
+
+        // Exercise
+        canvas.drawText("Total Exercise:", leftMargin + 20f, yPosition, bodyPaint)
+        canvas.drawText("${report.totalExerciseMinutes} minutes", leftMargin + 200f, yPosition, valuePaint)
+        yPosition += lineHeight
+
+        // Exercise Compliance
+        canvas.drawText("Exercise Compliance:", leftMargin + 20f, yPosition, bodyPaint)
+        val complianceColor = if (report.exerciseComplianceRate >= 80) {
+            AndroidColor.rgb(76, 175, 80) // Green
+        } else {
+            AndroidColor.rgb(244, 67, 54) // Red
+        }
+        valuePaint.color = complianceColor
+        canvas.drawText("${report.exerciseComplianceRate}%", leftMargin + 200f, yPosition, valuePaint)
+        valuePaint.color = AndroidColor.BLACK
+        yPosition += lineHeight
+
+        // Medication Adherence
+        canvas.drawText("Medication Adherence:", leftMargin + 20f, yPosition, bodyPaint)
+        val adherenceColor = if (report.medicationAdherenceRate >= 80) {
+            AndroidColor.rgb(76, 175, 80) // Green
+        } else {
+            AndroidColor.rgb(244, 67, 54) // Red
+        }
+        valuePaint.color = adherenceColor
+        canvas.drawText("${report.medicationAdherenceRate}%", leftMargin + 200f, yPosition, valuePaint)
+        valuePaint.color = AndroidColor.BLACK
+        yPosition += lineHeight
+
+        // Common Symptoms
+        canvas.drawText("Most Common Symptom:", leftMargin + 20f, yPosition, bodyPaint)
+        canvas.drawText(report.mostCommonSymptoms, leftMargin + 200f, yPosition, valuePaint)
+        yPosition += 35f
+
+        // ===== AI CHATBOT AUDIT =====
+        canvas.drawText("AI Chatbot Audit", leftMargin, yPosition, headerPaint)
+        yPosition += lineHeight
+
+        canvas.drawText("Total Chat Interactions:", leftMargin + 20f, yPosition, bodyPaint)
+        canvas.drawText("${report.totalChatInteractions}", leftMargin + 200f, yPosition, valuePaint)
+        yPosition += lineHeight
+
+        canvas.drawText("Out-of-Scope Queries:", leftMargin + 20f, yPosition, bodyPaint)
+        val scopeColor = if (report.outOfScopeInteractions > 0) {
+            AndroidColor.rgb(244, 67, 54) // Red
+        } else {
+            AndroidColor.rgb(76, 175, 80) // Green
+        }
+        valuePaint.color = scopeColor
+        canvas.drawText("${report.outOfScopeInteractions}", leftMargin + 200f, yPosition, valuePaint)
+        valuePaint.color = AndroidColor.BLACK
+        yPosition += 35f
+
+        // ===== CLINICAL RECOMMENDATIONS =====
+        canvas.drawText("Clinical Recommendations", leftMargin, yPosition, headerPaint)
+        yPosition += lineHeight
+
+        val recommendations = buildRecommendations(report)
+        val recommendationPaint = Paint().apply {
+            textSize = 11f
+            color = AndroidColor.DKGRAY
+        }
+
+        recommendations.forEach { recommendation ->
+            // Word wrap for recommendations
+            val words = recommendation.split(" ")
+            var line = ""
+            words.forEach { word ->
+                val testLine = if (line.isEmpty()) word else "$line $word"
+                val testWidth = recommendationPaint.measureText(testLine)
+                if (testWidth > (rightMargin - leftMargin - 40f)) {
+                    canvas.drawText("• $line", leftMargin + 20f, yPosition, recommendationPaint)
+                    yPosition += 20f
+                    line = word
+                } else {
+                    line = testLine
+                }
+            }
+            if (line.isNotEmpty()) {
+                canvas.drawText("• $line", leftMargin + 20f, yPosition, recommendationPaint)
+                yPosition += 20f
+            }
+            yPosition += 5f
+        }
+
+        yPosition += 20f
+
+        // ===== FOOTER =====
+        val footerY = pageHeight - 40f
+        val footerPaint = Paint().apply {
+            textSize = 9f
+            color = AndroidColor.GRAY
+        }
+        canvas.drawText("Generated by MyCardiacRehab System", leftMargin, footerY, footerPaint)
+        canvas.drawText("Report ID: ${report.patientId.take(8)}-${System.currentTimeMillis()}",
+            leftMargin, footerY + 12f, footerPaint)
+
+        pdfDocument.finishPage(page)
+
+        // Save and Share PDF
         val pdfDir = File(context.cacheDir, "reports")
         if (!pdfDir.exists()) {
             pdfDir.mkdirs()
         }
 
-        // 2. Create the file in the cache directory
-        val file = File(pdfDir, "Report_${patient.fullName.replace(" ", "_")}.pdf")
+        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val fileName = "Report_${patient.fullName.replace(" ", "_")}_$timestamp.pdf"
+        val file = File(pdfDir, fileName)
+
         val fileOutputStream = FileOutputStream(file)
         pdfDocument.writeTo(fileOutputStream)
         pdfDocument.close()
         fileOutputStream.close()
 
-        // 3. Get the secure URI using FileProvider
+        // Share using FileProvider
         val authority = "${context.packageName}.provider"
         val pdfUri = FileProvider.getUriForFile(context, authority, file)
 
-        // 4. Create the Share Intent
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
             type = "application/pdf"
             putExtra(Intent.EXTRA_STREAM, pdfUri)
-            putExtra(Intent.EXTRA_SUBJECT, "Patient Report for ${patient.fullName}")
+            putExtra(Intent.EXTRA_SUBJECT, "Patient Report - ${patient.fullName}")
+            putExtra(Intent.EXTRA_TEXT, "Weekly rehabilitation report for ${patient.fullName}")
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
 
-        // 5. Launch the Share sheet
-        context.startActivity(Intent.createChooser(shareIntent, "Share Report As..."))
+        context.startActivity(Intent.createChooser(shareIntent, "Share Report"))
+
+        Toast.makeText(context, "PDF generated successfully!", Toast.LENGTH_SHORT).show()
 
     } catch (e: Exception) {
         e.printStackTrace()
@@ -205,8 +348,41 @@ private fun generateAndSharePdf(context: Context, report: PatientReport, patient
     }
 }
 
+// Helper function to build recommendations based on report data
+@RequiresApi(Build.VERSION_CODES.O)
+private fun buildRecommendations(report: PatientReport): List<String> {
+    val recommendations = mutableListOf<String>()
 
-// ... (PatientSelectionDropdown composable remains the same) ...
+    // Exercise recommendations
+    if (report.exerciseComplianceRate < 50) {
+        recommendations.add("Patient requires increased motivation for exercise adherence. Consider setting smaller, achievable goals.")
+    } else if (report.exerciseComplianceRate < 80) {
+        recommendations.add("Exercise compliance is moderate. Encourage consistency and gradual intensity increase.")
+    } else {
+        recommendations.add("Excellent exercise compliance. Maintain current routine and consider gradual progression.")
+    }
+
+    // Medication recommendations
+    if (report.medicationAdherenceRate < 80) {
+        recommendations.add("Medication adherence needs improvement. Schedule review of medication schedule and potential barriers.")
+    } else {
+        recommendations.add("Good medication adherence maintained.")
+    }
+
+    // Symptom recommendations
+    if (report.mostCommonSymptoms != "None Reported" && report.mostCommonSymptoms != "None") {
+        recommendations.add("Monitor reported symptom: ${report.mostCommonSymptoms}. Consider clinical follow-up if symptoms persist.")
+    }
+
+    // AI interaction recommendations
+    if (report.outOfScopeInteractions > 3) {
+        recommendations.add("Patient has ${report.outOfScopeInteractions} out-of-scope queries. Schedule counseling session to address concerns beyond rehabilitation scope.")
+    }
+
+    return recommendations
+}
+
+// UI Components (unchanged from your original code)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PatientSelectionDropdown(
@@ -263,7 +439,6 @@ fun PatientSelectionDropdown(
     }
 }
 
-// ... (ReportCard and ReportMetric composables remain the same) ...
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun ReportCard(report: PatientReport) {
@@ -295,22 +470,16 @@ fun ReportCard(report: PatientReport) {
                 style = MaterialTheme.typography.labelSmall,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
-            HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
+            HorizontalDivider()
 
-            // Metrics Grid
             Spacer(Modifier.height(12.dp))
             ReportMetric("Total Exercise", "${report.totalExerciseMinutes} min")
             ReportMetric("Exercise Compliance", "${report.exerciseComplianceRate}%")
             ReportMetric("Meds Adherence", "${report.medicationAdherenceRate}%")
             ReportMetric("Common Symptom", report.mostCommonSymptoms)
 
-            HorizontalDivider(
-                Modifier.padding(vertical = 12.dp),
-                DividerDefaults.Thickness,
-                DividerDefaults.color
-            )
+            HorizontalDivider(Modifier.padding(vertical = 12.dp))
 
-            // AI Interaction Audit
             Text("AI Chatbot Audit", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 4.dp))
             ReportMetric("Total User Chats", "${report.totalChatInteractions}")
             ReportMetric("Out-of-Scope Flags", "${report.outOfScopeInteractions}",
