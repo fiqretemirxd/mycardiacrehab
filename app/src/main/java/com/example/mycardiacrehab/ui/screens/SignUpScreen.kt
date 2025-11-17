@@ -34,7 +34,7 @@ fun SignUpScreen(
     var password by remember { mutableStateOf("") }
     var fullName by remember { mutableStateOf("") }
     var isProvider by remember { mutableStateOf(false) }
-    var providerCode by remember { mutableStateOf("") }
+    //var providerCode by remember { mutableStateOf("") }
 
     val authState by viewModel.authState.collectAsState()
 
@@ -151,7 +151,7 @@ fun SignUpScreen(
                         )
                 }
 
-                AnimatedVisibility(visible = isProvider) {
+                /*AnimatedVisibility(visible = isProvider) {
                     OutlinedTextField(
                         value = providerCode,
                         onValueChange = { providerCode = it },
@@ -161,16 +161,17 @@ fun SignUpScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                     )
-                }
+                }*/
+
                 // --- Register Button ---
                 Button(
                     onClick = {
-                        viewModel.signUp(email, password, fullName, isProvider, providerCode)
+                        viewModel.signUp(email, password, fullName, isProvider)
                     },
                     enabled = authState != AuthViewModel.AuthState.Loading &&
                             fullName.isNotBlank() &&
-                            password.length >= 6 &&
-                            (!isProvider || (providerCode.isNotBlank())),
+                            password.length >= 6,
+                            //(!isProvider || (providerCode.isNotBlank())),
                     modifier = Modifier.fillMaxWidth().height(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = primaryBlue)
                 ) {

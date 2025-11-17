@@ -18,8 +18,12 @@ class AdminViewModel : ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
+    private val _pendingProviders = MutableStateFlow<List<User>>(emptyList())
+    val pendingProviders: StateFlow<List<User>> = _pendingProviders
+
     init {
         loadAllUsers()
+        loadPendingProviders()
     }
 
     fun loadAllUsers() = viewModelScope.launch {
@@ -32,6 +36,31 @@ class AdminViewModel : ViewModel() {
             e.printStackTrace()
         } finally {
             _isLoading.value = false
+        }
+    }
+
+    fun loadPendingProviders() = viewModelScope.launch {
+        try {
+            val result = db.collection("users")
+                .whereEqualTo("userType", "provider")
+                .whereEqualTo("isActive", false)
+                .get().await()
+            _pendingProviders.value = result.toObjects(User::class.java)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun approveProvider(user: User) = viewModelScope.launch {
+        try {
+            db.collection("users").document(user.userId)
+                .update("isActive", true)
+                .await()
+
+            loadAllUsers()
+            loadPendingProviders()
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
@@ -55,6 +84,7 @@ class AdminViewModel : ViewModel() {
         try {
             db.collection("users").document(userId).delete().await()
             loadAllUsers()
+            loadPendingProviders()
         } catch (e: Exception) {
             e.printStackTrace()
         }
