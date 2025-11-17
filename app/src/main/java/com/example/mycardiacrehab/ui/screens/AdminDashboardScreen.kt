@@ -222,7 +222,7 @@ fun AdminUserCard(user: User, onToggleStatus: () -> Unit, onDelete: () -> Unit) 
                 }
 
                 // Optional Delete button (Comment out if too dangerous)
-                /*
+
                 Spacer(modifier = Modifier.height(4.dp))
                 TextButton(
                     onClick = onDelete,
@@ -231,7 +231,7 @@ fun AdminUserCard(user: User, onToggleStatus: () -> Unit, onDelete: () -> Unit) 
                 ) {
                     Text("Delete", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
                 }
-                */
+
             }
         }
     }
