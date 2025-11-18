@@ -124,7 +124,6 @@ fun ReportCenterScreen(
     }
 }
 
-// ✅ ENHANCED PDF GENERATION FUNCTION
 @RequiresApi(Build.VERSION_CODES.O)
 private fun generateAndSharePdf(context: Context, report: PatientReport, patient: User) {
     val pdfDocument = PdfDocument()

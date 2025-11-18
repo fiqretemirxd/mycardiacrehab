@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.util.Date
 import com.google.firebase.Timestamp
-import com.google.firebase.firestore.ListenerRegistration // Ensure this is imported
+import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.tasks.await
 
 class AppointmentViewModel : ViewModel() {
@@ -25,22 +25,19 @@ class AppointmentViewModel : ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    // --- FIX 3: Separate listeners for each screen ---
     private var tabListener: ListenerRegistration? = null
     private var dashboardListener: ListenerRegistration? = null
 
-    // --- NEW FUNCTION: Only for the Dashboard (PatientHomeScreen) ---
     fun loadAppointmentsForDashboard(userId: String) {
         if (userId.isBlank()) {
-            dashboardListener?.remove() // Remove any old dashboard listener
+            dashboardListener?.remove()
             _dashboardAppointments.value = emptyList()
             return
         }
 
-        dashboardListener?.remove() // Remove any old dashboard listener
+        dashboardListener?.remove()
         _dashboardAppointments.value = emptyList()
 
-        // Simple query - only filter by patientId (no composite index needed)
         val query = db.collection("appointments")
             .whereEqualTo("patientId", userId)
 
@@ -62,7 +59,6 @@ class AppointmentViewModel : ViewModel() {
         }
     }
 
-    // --- RENAMED FUNCTION: Only for the AppointmentScreen ---
     fun loadAppointmentsForTab(userId: String, category: String) {
         println("========================================")
         println("📅 APPOINTMENT DEBUG - loadAppointmentsForTab called")
@@ -72,13 +68,12 @@ class AppointmentViewModel : ViewModel() {
 
         if (userId.isBlank()) {
             println("❌ ERROR: UserId is blank, aborting load")
-            tabListener?.remove() // Remove any old tab listener
+            tabListener?.remove()
             _appointments.value = emptyList()
             _isLoading.value = false
             return
         }
 
-        // Remove old listener FIRST before clearing data to prevent race conditions
         tabListener?.remove()
         println("🗑️ Old listener removed")
 
@@ -88,7 +83,6 @@ class AppointmentViewModel : ViewModel() {
         viewModelScope.launch {
             println("⏰ Building simple query (no indexes needed)")
 
-            // Simple query - only filter by patientId (no composite index needed)
             val query: Query = db.collection("appointments")
                 .whereEqualTo("patientId", userId)
 
@@ -123,7 +117,6 @@ class AppointmentViewModel : ViewModel() {
                     appointment
                 } ?: emptyList()
 
-                // Re-check the current time for accurate filtering
                 val currentTime = Date()
 
                 println("\n📊 RAW DATA FROM FIRESTORE:")
@@ -194,14 +187,12 @@ class AppointmentViewModel : ViewModel() {
         }
     }
 
-    // --- FIX 4: Make sure to clear BOTH listeners ---
     override fun onCleared() {
         tabListener?.remove()
         dashboardListener?.remove()
         super.onCleared()
     }
 
-    // --- (createAppointment and cancelAppointment functions are fine, no changes) ---
     fun createAppointment(
         patientId: String,
         providerId: String,
@@ -210,7 +201,7 @@ class AppointmentViewModel : ViewModel() {
         mode: String,
         notes: String
     ) {
-        _isLoading.value = true // Indicate that an operation is in progress
+        _isLoading.value = true
 
         viewModelScope.launch {
             val newAppointment = Appointment(
@@ -218,20 +209,17 @@ class AppointmentViewModel : ViewModel() {
                 providerId = providerId,
                 providerName = providerName,
                 appointmentDateTime = dateTime,
-                status = "scheduled", // New appointments are always "scheduled"
+                status = "scheduled",
                 mode = mode,
                 notes = notes
             )
 
-            // Add the new appointment to the "appointments" collection in Firestore
             db.collection("appointments")
                 .add(newAppointment)
                 .addOnSuccessListener {
-                    // Success!
                     _isLoading.value = false
                 }
                 .addOnFailureListener {
-                    // Handle the error, e.g., show a toast
                     _isLoading.value = false
                 }
         }

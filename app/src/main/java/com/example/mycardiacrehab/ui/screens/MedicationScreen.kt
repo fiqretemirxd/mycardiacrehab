@@ -21,8 +21,6 @@ import com.example.mycardiacrehab.model.MedicationReminder
 import com.example.mycardiacrehab.viewmodel.AuthViewModel
 import com.example.mycardiacrehab.viewmodel.MedicationViewModel
 
-// 🟢 FIX 1: Suppress all warnings related to unused functions/properties
-// that are needed by other screens (like ProgressScreen.kt)
 @Suppress("Unused")
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -63,7 +61,6 @@ fun MedicationScreen(
                     "$adherenceRate%",
                     style = MaterialTheme.typography.displaySmall.copy(color = MaterialTheme.colorScheme.onSecondaryContainer)
                 )
-                // 🟢 FIX 2: Use the Lambda overload to satisfy the progress parameter requirement
                 LinearProgressIndicator(
                     progress = { adherenceRate / 100f },
                     modifier = Modifier.fillMaxWidth().height(8.dp),

@@ -23,7 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.mycardiacrehab.model.* // Import all data models
+import com.example.mycardiacrehab.model.*
 import com.example.mycardiacrehab.viewmodel.ChatbotViewModel
 import com.example.mycardiacrehab.viewmodel.ExerciseViewModel
 import com.example.mycardiacrehab.viewmodel.JournalViewModel
@@ -56,7 +56,6 @@ fun PatientDetailScreen(
     val patientProfile by providerViewModel.currentPatientProfile.collectAsState()
     val isArchiving by providerViewModel.loading.collectAsState()
 
-    // 🟢 FIX: Collect all data states using 'by' delegation for correct usage
     val exerciseLogs by exerciseViewModel.logs.collectAsState()
     val medicationSchedule by medicationViewModel.dailySchedule.collectAsState()
     val journalEntries by journalViewModel.entries.collectAsState()
@@ -84,10 +83,8 @@ fun PatientDetailScreen(
                     Text("Detailed Rehabilitation Dashboard", style = MaterialTheme.typography.titleMedium)
                 }
 
-                // 🟢 NEW: Archive Button
                 IconButton(
                     onClick = { showArchiveDialog = true },
-                    // Disable if saving or if the profile isn't loaded yet
                     enabled = !isArchiving && patientProfile != null
                 ) {
                     Icon(Icons.Default.Archive, contentDescription = "Archive Patient", tint = MaterialTheme.colorScheme.error)
@@ -99,28 +96,24 @@ fun PatientDetailScreen(
         // --- 1. Medication Adherence Summary ---
         item {
             DataSectionTitle("Medication Adherence (Last 10 Doses)")
-            // 🟢 FIX: Pass the correctly observed state list
             MedicationSummary(medicationSchedule)
         }
 
         // --- 2. Recent Exercise Logs ---
         item {
             DataSectionTitle("Recent Exercise Logs")
-            // 🟢 FIX: Pass the correctly observed state list
             ExerciseSummary(exerciseLogs.take(5))
         }
 
         // --- 3. Recent Journal Entries ---
         item {
             DataSectionTitle("Recent Patient Journal Entries")
-            // 🟢 FIX: Pass the correctly observed state list
             JournalSummary(journalEntries.take(3))
         }
 
         // --- 4. Chatbot Interaction Log (F04-3) ---
         item {
             DataSectionTitle("Chatbot Interaction Logs (Safety Audit)")
-            // 🟢 FIX: Pass the correctly observed state list
             ChatLogSummary(chatMessages.takeLast(5))
         }
     }
@@ -188,7 +181,7 @@ fun DataSectionTitle(title: String) {
 }
 
 @Composable
-fun MedicationSummary(schedule: List<MedicationReminder>) { // Parameter type is correct
+fun MedicationSummary(schedule: List<MedicationReminder>) {
     val taken = schedule.count { it.reminderStatus == "Taken" }
     val total = schedule.size
     val rate = if (total > 0) (taken.toFloat() / total * 100).toInt() else 0
@@ -221,7 +214,7 @@ fun MedicationSummary(schedule: List<MedicationReminder>) { // Parameter type is
 }
 
 @Composable
-fun ExerciseSummary(logs: List<ExerciseLog>) { // Parameter type is correct
+fun ExerciseSummary(logs: List<ExerciseLog>) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (logs.isEmpty()) {
             Text("No exercise logs found.")
@@ -239,7 +232,7 @@ fun ExerciseSummary(logs: List<ExerciseLog>) { // Parameter type is correct
 }
 
 @Composable
-fun JournalSummary(entries: List<JournalEntry>) { // Parameter type is correct
+fun JournalSummary(entries: List<JournalEntry>) {
     val dateFormatter = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -264,7 +257,7 @@ fun JournalSummary(entries: List<JournalEntry>) { // Parameter type is correct
 }
 
 @Composable
-fun ChatLogSummary(messages: List<ChatMessage>) { // Parameter type is correct
+fun ChatLogSummary(messages: List<ChatMessage>) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         messages.forEach { message ->
             val isUser = message.role == "user"

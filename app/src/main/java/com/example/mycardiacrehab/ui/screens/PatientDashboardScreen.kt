@@ -18,7 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel // Make sure this is imported
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -49,8 +49,6 @@ fun PatientDashboardScreen(
     val userId = (authState as? AuthViewModel.AuthState.Authenticated)?.userId ?: "N/A"
     val navController = rememberNavController()
 
-    // 1. CREATE ALL VIEW MODELS HERE (THE PARENT)
-    // This ensures there is only ONE instance of each.
     val appointmentViewModel: AppointmentViewModel = viewModel()
     val medicationViewModel: MedicationViewModel = viewModel()
     val progressViewModel: ProgressViewModel = viewModel()
@@ -123,7 +121,6 @@ fun PatientDashboardScreen(
                     userId = userId,
                     userEmail = userEmail,
                     navController = navController,
-                    // 2. PASS THE SHARED VIEW MODELS DOWN
                     progressViewModel = progressViewModel,
                     appointmentViewModel = appointmentViewModel,
                     medicationViewModel = medicationViewModel
@@ -133,7 +130,6 @@ fun PatientDashboardScreen(
             // --- Secondary Screens (Accessed via MoreScreen) ---
             composable(PatientScreen.Exercise.route) { ExerciseScreen() }
             composable(PatientScreen.Medication.route) {
-                // 3. PASS THE SHARED MEDICATION VIEWMODEL
                 MedicationScreen(
                     authViewModel = authViewModel,
                     medicationViewModel = medicationViewModel
@@ -142,14 +138,12 @@ fun PatientDashboardScreen(
             composable(PatientScreen.Chatbot.route) { ChatbotScreen() }
             composable(PatientScreen.Journal.route) { JournalScreen() }
             composable(PatientScreen.Appointments.route) {
-                // 4. PASS THE SHARED AUTH AND APPOINTMENT VIEW MODELS
                 AppointmentScreen(
                     authViewModel = authViewModel,
                     appointmentViewModel = appointmentViewModel
                 )
             }
             composable(PatientScreen.Progress.route) {
-                // 5. PASS THE SHARED PROGRESS VIEWMODEL
                 ProgressScreen(
                     authViewModel = authViewModel,
                     progressViewModel = progressViewModel
@@ -163,15 +157,12 @@ fun PatientDashboardScreen(
                     profileViewModel = profileViewModel
                 )
             }
-
             composable(PatientScreen.More.route) { MoreScreen(navController = navController) }
         }
     }
 }
 
-// -------------------------------------------------------------------------------------
 // --- HELPER COMPONENT DEFINITIONS ---
-// -------------------------------------------------------------------------------------
 
 // --- Home Screen Content ---
 @RequiresApi(Build.VERSION_CODES.O)
@@ -181,34 +172,28 @@ fun PatientHomeScreen(
     userEmail: String,
     navController: NavHostController,
     progressViewModel: ProgressViewModel,
-    appointmentViewModel: AppointmentViewModel, // This is the shared VM
+    appointmentViewModel: AppointmentViewModel,
     medicationViewModel: MedicationViewModel
 ) {
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(userId) {
-        // This effect will run ONLY when the userId becomes stable and is not "N/A"
         if (userId != "N/A") {
             isLoading = true
 
-            // Use joinAll to launch all three data fetches concurrently and wait for them to finish
             joinAll(
                 launch { progressViewModel.loadWeeklyProgress(userId) },
                 launch { appointmentViewModel.loadAppointmentsForDashboard(userId) },
                 launch { medicationViewModel.loadDailySchedule(userId) }
             )
-
-            // Only after all launches complete, set loading to false.
             isLoading = false
         } else {
-            // If the user is unauthenticated or loading, show nothing/spinner briefly
             isLoading = false
         }
     }
 
     val summary by progressViewModel.weeklySummary.collectAsState()
 
-    // --- FIX: Observe the NEW dashboard-specific list ---
     val upcomingAppointments by appointmentViewModel.dashboardAppointments.collectAsState()
 
     val adherenceRate by medicationViewModel.adherenceRate.collectAsState()
@@ -242,7 +227,6 @@ fun PatientHomeScreen(
                 )
             }
 
-            // --- Weekly Progress Summary Cards (Resolves Unresolved reference 'DashboardSummaryCard') ---
             item {
                 Text("Weekly Progress Snapshot", style = MaterialTheme.typography.titleLarge)
                 Row(
@@ -271,7 +255,6 @@ fun PatientHomeScreen(
                 }
             }
 
-            // --- Upcoming Appointments List (Resolves Unresolved reference 'AppointmentSummaryItem') ---
             item {
                 Text(
                     "Upcoming Appointments (${upcomingAppointments.size})",
@@ -340,10 +323,6 @@ fun PatientHomeScreen(
         }
     }
 }
-
-// -------------------------------------------------------------------------------------
-// Helper Functions (Resolves all Unresolved Reference errors)
-// -------------------------------------------------------------------------------------
 
 @Composable
 fun DashboardSummaryCard(

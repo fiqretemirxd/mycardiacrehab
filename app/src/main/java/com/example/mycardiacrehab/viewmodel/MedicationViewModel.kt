@@ -26,7 +26,7 @@ class MedicationViewModel : ViewModel() {
     private val _adherenceRate = MutableStateFlow(0)
     val adherenceRate: StateFlow<Int> = _adherenceRate
 
-    private var userId: String = "" // Variable to hold the current user ID for listeners
+    private var userId: String = ""
 
     // --- Load Daily Medication Schedule ---
     fun loadDailySchedule(currentUserId: String) {
@@ -36,7 +36,7 @@ class MedicationViewModel : ViewModel() {
         // Use consistent, lowercase collection name
         db.collection("MedicationReminders")
             .whereEqualTo("userId", currentUserId)
-            .orderBy("timestamp", Query.Direction.DESCENDING) // Corrected field to 'timestamp'
+            .orderBy("timestamp", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, e ->
                 if (e != null) {
                     println("Medication listen failed: $e")
@@ -48,18 +48,17 @@ class MedicationViewModel : ViewModel() {
                 } ?: emptyList()
 
                 _dailySchedule.value = logList
-                calculateAdherence(logList) // Calculate adherence immediately after load
+                calculateAdherence(logList)
             }
     }
 
-    // --- CRITICAL ADDITION: The Adherence Calculation function needed by the Progress screen ---
+    // Adherence Calculation function needed by the Progress screen ---
     private fun calculateAdherence(schedule: List<MedicationReminder>) {
         if (schedule.isEmpty()) {
             _adherenceRate.value = 0
             return
         }
 
-        // For simplicity in MVP: check ratio of 'Taken' vs. total logged entries
         val totalDoses = schedule.size
         val dosesTaken = schedule.count { it.reminderStatus == "Taken" }
 
@@ -90,7 +89,6 @@ class MedicationViewModel : ViewModel() {
         )
 
         try {
-            // Use consistent, lowercase collection name
             db.collection("MedicationReminders").add(newReminder).await()
         } catch (e: Exception) {
             println("Error setting prescription: ${e.message}")
@@ -99,13 +97,12 @@ class MedicationViewModel : ViewModel() {
         }
     }
 
-    // --- NEWLY ADDED: Update Medication Status ---
     fun updateStatus(medication: MedicationReminder, newStatus: String) = viewModelScope.launch {
-        if (medication.id.isBlank()) return@launch // Cannot update if there's no ID
+        if (medication.id.isBlank()) return@launch
 
-        _loading.value = true // Indicate that a save operation is in progress
+        _loading.value = true // Show loading indicator
+
         try {
-            // Update the 'reminderStatus' field in the specific document
             db.collection("MedicationReminders").document(medication.id)
                 .update("reminderStatus", newStatus)
                 .await() // Wait for the update to complete
@@ -114,6 +111,5 @@ class MedicationViewModel : ViewModel() {
         } finally {
             _loading.value = false // Operation finished, hide loading indicator
         }
-        // The snapshot listener in loadDailySchedule will automatically refresh the UI
     }
 }

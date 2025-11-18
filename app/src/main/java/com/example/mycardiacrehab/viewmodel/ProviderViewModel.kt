@@ -40,9 +40,7 @@ class ProviderViewModel : ViewModel() {
         }
     }
 
-    // ✅ --- REFACTORED FUNCTION ---
     fun loadProviderProfile() = viewModelScope.launch {
-        // No need to set loading here if the UI doesn't depend on it
         try {
             val providerId = FirebaseAuth.getInstance().currentUser?.uid ?: return@launch
             val document = db.collection("users").document(providerId).get().await()
@@ -51,7 +49,6 @@ class ProviderViewModel : ViewModel() {
             }
         } catch (e: Exception) {
             println("Error loading provider profile: ${e.message}")
-            // Handle error, maybe set profile to null or an error state
         }
     }
 

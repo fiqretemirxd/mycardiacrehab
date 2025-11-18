@@ -42,7 +42,6 @@ class ReportViewModel : ViewModel() {
             val startDate = endDate.minusDays(daysToCover.toLong() - 1)
             val startTime = Timestamp(startDate.atStartOfDay(ZoneId.systemDefault()).toEpochSecond(), 0)
 
-            // 1. Fetch all data streams concurrently
             val exerciseLogs = db.collection("exerciselog")
                 .whereEqualTo("userId", patientId)
                 .whereGreaterThan("timestamp", startTime)
@@ -63,7 +62,6 @@ class ReportViewModel : ViewModel() {
                 .whereGreaterThan("timestamp", startTime)
                 .get().await().toObjects(ChatMessage::class.java)
 
-            // 2. Aggregate the data
             val totalMins = exerciseLogs.sumOf { it.duration }
             val adherenceRate = calculateAdherenceRate(medicationLogs)
             val commonSymptom = analyzeSymptoms(journalEntries)
@@ -73,7 +71,6 @@ class ReportViewModel : ViewModel() {
             val weeklyExerciseTarget = 150
             val complianceRate = ((totalMins.toDouble() / weeklyExerciseTarget) * 100).roundToInt().coerceAtMost(100)
 
-            // 3. Create the report object
             _report.value = PatientReport(
                 patientId = patientId,
                 patientName = patientName,

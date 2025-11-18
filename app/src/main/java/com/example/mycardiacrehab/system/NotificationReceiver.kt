@@ -25,19 +25,13 @@ class NotificationReceiver : BroadcastReceiver() {
             .setAutoCancel(true)
 
         with(NotificationManagerCompat.from(context)) {
-            // FIX: Add a check for the POST_NOTIFICATIONS permission before calling notify()
             if (ActivityCompat.checkSelfPermission(
                     context,
                     Manifest.permission.POST_NOTIFICATIONS
                 ) == PackageManager.PERMISSION_GRANTED
             ) {
-                // You have permission, so you can post the notification
                 notify(reminderId, builder.build())
             } else {
-                // Permission has not been granted.
-                // For a BroadcastReceiver, you can't request permission here.
-                // You should log this or handle it silently.
-                // The permission should be requested from your UI (Activity/Composable).
                 println("Notification permission not granted. Cannot post notification.")
             }
         }

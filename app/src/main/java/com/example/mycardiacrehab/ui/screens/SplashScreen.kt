@@ -20,7 +20,7 @@ import kotlinx.coroutines.delay
 fun SplashScreen(onTimeout: () -> Unit) {
     // TIMER: Wait for a shorter duration for a better user experience
     LaunchedEffect(Unit) {
-        delay(3000) // 3 seconds is usually enough
+        delay(3000)
         onTimeout()
     }
 

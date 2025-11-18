@@ -21,7 +21,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mycardiacrehab.model.User
 import com.example.mycardiacrehab.viewmodel.MedicationViewModel
 import com.example.mycardiacrehab.viewmodel.ProviderViewModel
-import java.text.SimpleDateFormat // Added for formatting time
+import java.text.SimpleDateFormat
 import java.util.*
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -68,12 +68,11 @@ fun ProviderMedicationScreen(
     val saveMedication: () -> Unit = {
         if (selectedPatient != null && medName.isNotBlank() && dosage.isNotBlank()) {
             medicationViewModel.setPrescription(
-                // ✅ FIX #1: Correct property is 'uid' not 'userId'
                 patientId = selectedPatient!!.userId,
                 medicationName = medName,
                 dosage = dosage,
                 frequency = frequency,
-                timeOfDay = timeFormatter.format(selectedTime.time) // Use formatted time
+                timeOfDay = timeFormatter.format(selectedTime.time)
             )
             Toast.makeText(context, "Prescription set for ${selectedPatient?.fullName}", Toast.LENGTH_SHORT).show()
 
@@ -137,7 +136,6 @@ fun ProviderMedicationScreen(
 
             Text("Time:", modifier = Modifier.padding(start = 16.dp, end = 8.dp))
 
-            // ✅ FIX #2: Integrated your desired Box layout for the time picker
             Box(modifier = Modifier.weight(1f)) {
                 OutlinedTextField(
                     value = timeFormatter.format(selectedTime.time),

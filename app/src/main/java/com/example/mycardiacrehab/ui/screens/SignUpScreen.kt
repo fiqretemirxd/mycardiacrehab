@@ -61,10 +61,9 @@ fun SignUpScreen(
                 // --- FIXES ARE HERE ---
                 modifier = Modifier
                     .padding(24.dp)
-                    .verticalScroll(rememberScrollState()), // Already had scroll
+                    .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp) // 1. Added automatic spacing
-                // -----------------------
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // --- Header and Title ---
                 Row(

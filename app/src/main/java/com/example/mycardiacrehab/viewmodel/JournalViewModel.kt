@@ -79,7 +79,7 @@ class JournalViewModel : ViewModel() {
 
         val updates = mapOf(
             "mood" to newMood,
-            "symptoms" to newSymptoms.ifBlank { null }, // Save null if blank
+            "symptoms" to newSymptoms.ifBlank { null },
             "freeTextEntry" to newFreeText
         )
 
@@ -92,7 +92,6 @@ class JournalViewModel : ViewModel() {
         }
     }
 
-    // 🟢 NEW: Implement Delete (D)
     fun deleteEntry(entryId: String) = viewModelScope.launch {
         if (entryId.isBlank()) return@launch
         _loading.value = true

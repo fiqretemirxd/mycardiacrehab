@@ -83,7 +83,7 @@ fun AdminDashboardScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0)), // Light Orange
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0)),
                     elevation = CardDefaults.cardElevation(4.dp)
                 ) {
                     Column(Modifier.padding(16.dp)) {
@@ -156,7 +156,6 @@ fun AdminDashboardScreen(
     }
 }
 
-// Condensed view for inside the main Pending Card
 @Composable
 fun PendingProviderItem(user: User, onApprove: () -> Unit) {
     Row(
@@ -186,7 +185,7 @@ fun PendingProviderItem(user: User, onApprove: () -> Unit) {
 fun AdminUserCard(user: User, onToggleStatus: () -> Unit, onDelete: () -> Unit) {
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = if (user.isActive) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFFFEBEE) // Light Red if inactive
+            containerColor = if (user.isActive) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFFFEBEE)
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier.fillMaxWidth()

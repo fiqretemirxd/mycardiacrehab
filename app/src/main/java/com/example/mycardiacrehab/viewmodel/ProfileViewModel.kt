@@ -45,10 +45,6 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Saves changes to the user's profile.
-     * We only update the fields that are editable.
-     */
     fun saveProfile(
         userId: String,
         fullName: String,
@@ -81,7 +77,7 @@ class ProfileViewModel : ViewModel() {
                     emergencyContactName = emergencyContactName,
                     emergencyContactNumber = emergencyContactNumber
                 )
-                _saveSuccess.value = true // Signal success to the UI
+                _saveSuccess.value = true
             } catch (e: Exception) {
                 println("Error saving profile: ${e.message}")
                 _saveSuccess.value = false // Signal failure

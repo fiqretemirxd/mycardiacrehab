@@ -39,7 +39,7 @@ import com.example.mycardiacrehab.viewmodel.ReportViewModel
 @Composable
 fun ProviderDashboardScreen(
     authViewModel: AuthViewModel,
-    providerViewModel: ProviderViewModel = viewModel() // This will now be used
+    providerViewModel: ProviderViewModel = viewModel()
 ) {
 
     val currentUser by authViewModel.currentUser.collectAsState()
@@ -111,7 +111,6 @@ fun ProviderDashboardScreen(
         ) {
             // --- Patient List (Monitoring Core) ---
             composable(ProviderScreen.PatientList.route) {
-                // ✨ FIX 1: Pass the ViewModel to the Patient List Screen
                 ProviderPatientListScreen(
                     navController = navController,
                     providerViewModel = providerViewModel // Now being used
@@ -120,10 +119,9 @@ fun ProviderDashboardScreen(
 
             // --- Appointments Screen (Provider View) ---
             composable(ProviderScreen.Appointments.route) {
-                ProviderAppointmentScreen( // This call will remove the warning
+                ProviderAppointmentScreen(
                     providerViewModel = providerViewModel,
                     authViewModel = authViewModel
-                    // appointmentViewModel is created by default inside the screen
                 )
             }
 
@@ -133,10 +131,9 @@ fun ProviderDashboardScreen(
 
             // --- Report Center (F04-2, Interview Q9) ---
             composable(ProviderScreen.ReportCenter.route) {
-                // ✨ FIX 2: Pass the ViewModel to the Report Center Screen
                 ReportCenterScreen(
-                    providerViewModel = providerViewModel, // Now being used
-                    reportViewModel = reportViewModel // Now being used
+                    providerViewModel = providerViewModel,
+                    reportViewModel = reportViewModel
                 )
             }
 
@@ -162,10 +159,9 @@ fun ProviderDashboardScreen(
                 arguments = listOf(navArgument("patientId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val patientId = backStackEntry.arguments?.getString("patientId") ?: "error"
-                // ✨ FIX 3: Pass the ViewModel to the Patient Detail Screen
                 PatientDetailScreen(
                     patientId = patientId,
-                    providerViewModel = providerViewModel // Now being used
+                    providerViewModel = providerViewModel
                 )
             }
         }

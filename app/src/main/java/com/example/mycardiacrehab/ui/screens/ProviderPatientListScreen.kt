@@ -17,12 +17,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.mycardiacrehab.model.User
-import com.example.mycardiacrehab.ui.navigation.ProviderScreen // Assuming this is where your routes are
+import com.example.mycardiacrehab.ui.navigation.ProviderScreen
 import com.example.mycardiacrehab.viewmodel.ProviderViewModel
 
 @Composable
 fun ProviderPatientListScreen(
-    navController: NavController, // Already correctly in parameters
+    navController: NavController,
     providerViewModel: ProviderViewModel = viewModel()
 ) {
     // Fetches the patient list when the screen is first displayed
@@ -51,10 +51,8 @@ fun ProviderPatientListScreen(
             }
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(patients, key = { it.userId }) { patient -> // Using a key is a best practice
+                items(patients, key = { it.userId }) { patient ->
                     PatientListItem(patient = patient) { selectedPatient ->
-                        // FIX: Implement navigation to the patient detail screen
-                        // The patient's unique ID (uid) is used to create the route.
                         navController.navigate(ProviderScreen.PatientDetail.createRoute(selectedPatient.userId))
                     }
                 }
@@ -68,14 +66,14 @@ fun PatientListItem(patient: User, onClick: (User) -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick(patient) }, // The whole card is clickable
+            .clickable { onClick(patient) },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f)) { // Use weight to allow text to take available space
+            Column(modifier = Modifier.weight(1f)) {
                 Text(patient.fullName, style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(4.dp))
                 Text(patient.email, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)

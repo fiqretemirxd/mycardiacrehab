@@ -10,9 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-// --- THIS IMPORT FIXES YOUR ERRORS ---
 import androidx.compose.runtime.collectAsState
-// -------------------------------------
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,7 +32,6 @@ fun ProgressScreen(
     progressViewModel: ProgressViewModel = viewModel()
 ) {
     val authState by authViewModel.authState.collectAsState()
-    // These lines will now work because of the import above
     val summary by progressViewModel.weeklySummary.collectAsState()
     val isLoading by progressViewModel.loading.collectAsState()
 
@@ -109,9 +106,6 @@ fun ProgressScreen(
     }
 }
 
-/**
- * A custom composable for a circular progress (donut) chart.
- */
 @Composable
 fun ProgressDonutChart(
     percentage: Float,

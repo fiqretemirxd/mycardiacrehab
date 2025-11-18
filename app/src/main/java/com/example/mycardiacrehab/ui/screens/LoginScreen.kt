@@ -3,10 +3,10 @@ package com.example.mycardiacrehab.ui.screens
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState // <-- ADD THIS IMPORT
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll // <-- ADD THIS IMPORT
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MailOutline
@@ -53,16 +53,14 @@ fun LoginScreen(
             elevation = CardDefaults.cardElevation(8.dp)
         ) {
             Column(
-                // --- FIXES ARE HERE ---
                 modifier = Modifier
                     .padding(24.dp)
-                    .verticalScroll(rememberScrollState()), // 1. Added scroll
+                    .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp) // 2. Added automatic spacing
+                verticalArrangement = Arrangement.spacedBy(16.dp)
                 // -----------------------
             ) {
                 // --- Logo and Title ---
-                // (Wrap in a Column to keep them together)
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Image(
                         painter = painterResource(id = R.drawable.logo),
@@ -77,7 +75,6 @@ fun LoginScreen(
                 }
 
                 // --- Header ---
-                // (Wrap in a Column to keep them together)
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
                         "Login",

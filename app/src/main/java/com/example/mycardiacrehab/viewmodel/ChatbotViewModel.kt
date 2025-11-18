@@ -35,11 +35,9 @@ class ChatbotViewModel : ViewModel() {
         Keep your answers brief, informative, and encouraging.
     """.trimIndent()
 
-    // The hard-coded API key is GONE. This is secure.
-    // The initialization is clean and uses BuildConfig.
     private val generativeModel: GenerativeModel = GenerativeModel(
         modelName = "gemini-2.5-flash",
-        apiKey = BuildConfig.GEMINI_API_KEY, // This will resolve after the final sync.
+        apiKey = BuildConfig.GEMINI_API_KEY,
         systemInstruction = content { text(systemPrompt) }
     )
 

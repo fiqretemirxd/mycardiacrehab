@@ -30,7 +30,6 @@ fun AppointmentScreen(
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabs = listOf("Upcoming", "Past", "Cancelled")
 
-    // --- THIS IS THE FIX ---
     val currentUserId = (authState as? AuthViewModel.AuthState.Authenticated)?.userId
 
     val isReady = authState is AuthViewModel.AuthState.Authenticated
@@ -50,9 +49,8 @@ fun AppointmentScreen(
             loadAppointments(0)
         }
     }
-    // --- END OF FIX ---
 
-    val currentList by appointmentViewModel.appointments.collectAsState() // Use the tab-specific list
+    val currentList by appointmentViewModel.appointments.collectAsState()
     val isLoading by appointmentViewModel.isLoading.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -105,9 +103,7 @@ fun AppointmentScreen(
     }
 }
 
-// -------------------------------------------------------------------------------------------------
-// LIST + CARD
-// -------------------------------------------------------------------------------------------------
+                                                    // LIST + CARD
 
 @Composable
 private fun AppointmentList(

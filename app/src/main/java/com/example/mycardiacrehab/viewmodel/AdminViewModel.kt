@@ -84,7 +84,7 @@ class AdminViewModel : ViewModel() {
         }
     }
 
-    // Feature: Delete User (Optional - be careful with this!)
+    // Feature: Delete User (Remove from Firestore)
     fun deleteUser(userId: String) = viewModelScope.launch {
         try {
             db.collection("users").document(userId).delete().await()

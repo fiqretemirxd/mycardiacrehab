@@ -50,7 +50,6 @@ fun ProviderAppointmentScreen(
 
     val authState by authViewModel.authState.collectAsState()
     val providerId = (authState as? AuthViewModel.AuthState.Authenticated)?.userId ?: "N/A"
-    // Assuming provider's name can be fetched or is known. For now, a placeholder.
     val providerName = providerProfile?.fullName ?: "Loading..."
 
     var selectedPatient by remember { mutableStateOf<User?>(null) }
@@ -252,7 +251,6 @@ fun ProviderAppointmentScreen(
     }
 }
 
-// FIX: Added the missing PatientSelectionDropdown composable
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PatientSelectionDropdown(

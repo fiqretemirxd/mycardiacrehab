@@ -18,7 +18,6 @@ class AuthViewModel : ViewModel() {
     private val _authState = MutableStateFlow<AuthState>(AuthState.Unauthenticated)
     val authState: StateFlow<AuthState> = _authState
 
-    // FIX 1: Added the new StateFlow to hold the full User object
     private val _currentUser = MutableStateFlow<User?>(null)
     val currentUser: StateFlow<User?> = _currentUser
 
@@ -37,13 +36,12 @@ class AuthViewModel : ViewModel() {
             } else {
                 if (_authState.value !is AuthState.Error) {
                     _authState.value = AuthState.Unauthenticated
-                    _currentUser.value = null // Also clear the user details on logout
+                    _currentUser.value = null
                 }
             }
         }
     }
 
-    // FIX 2: Added the new function to fetch the full user details
     fun fetchUser() = viewModelScope.launch {
         val userId = auth.currentUser?.uid ?: return@launch
         try {
@@ -56,13 +54,9 @@ class AuthViewModel : ViewModel() {
 
     private fun fetchUserType(userId: String) = viewModelScope.launch {
 
-        // --- THIS IS THE FIX ---
-        // We only set 'Loading' if the user is NOT already authenticated.
-        // This stops the flicker on every screen load.
         if (_authState.value !is AuthState.Authenticated) {
             _authState.value = AuthState.Loading
         }
-        // --- END OF FIX ---
 
         try {
             val userDoc = db.collection("users").document(userId).get().await()
@@ -83,7 +77,6 @@ class AuthViewModel : ViewModel() {
 
             _authState.value = AuthState.Authenticated(userId, userType, email)
 
-            // FIX 3: Call the new function to populate the currentUser StateFlow
             fetchUser()
         } catch (e: Exception) {
             _authState.value = AuthState.Error("Failed to fetch user role: ${e.localizedMessage}")
@@ -116,19 +109,14 @@ class AuthViewModel : ViewModel() {
             val userId = userCredential.user?.uid ?: throw Exception("User ID is null after creation")
 
             val user = User(
-                // Using 'uid' to match the User data class property
                 userId = userId,
                 fullName = fullName,
                 email = email,
                 userType = userType,
                 isActive = initialActiveStatus,
-                // The 'specialization' property might not exist in your User model.
-                // If it doesn't, this line should be removed.
-                // specialization = if (isProvider) "Cardiologist" else null
             )
 
             db.collection("users").document(userId).set(user).await()
-            // After sign-up, the auth state listener will automatically trigger fetchUserType().
         } catch (e: Exception) {
             _authState.value = AuthState.Error("Sign Up Failed: ${e.localizedMessage}")
         }
@@ -138,7 +126,6 @@ class AuthViewModel : ViewModel() {
         _authState.value = AuthState.Loading
         try {
             auth.signInWithEmailAndPassword(email, password).await()
-            // On success, the auth state listener will automatically trigger fetchUserType()
         } catch (e: Exception) {
             _authState.value = AuthState.Error("Login Failed: ${e.localizedMessage}")
         }
@@ -146,6 +133,5 @@ class AuthViewModel : ViewModel() {
 
     fun logout() {
         auth.signOut()
-        // The auth state listener will handle setting the states to unauthenticated.
     }
 }

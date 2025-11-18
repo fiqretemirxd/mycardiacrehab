@@ -45,15 +45,11 @@ class MainActivity : ComponentActivity() {
 
                     NavHost(
                         navController = navController,
-                        // 🟢 2. SET THE STARTING SCREEN TO "splash"
                         startDestination = "splash"
                     ) {
-                        // 🟢 3. ADD THE COMPOSABLE ROUTE FOR THE SPLASH SCREEN
                         composable("splash") {
                             SplashScreen(
                                 onTimeout = {
-                                    // When the timer finishes, navigate to login
-                                    // and clear the back stack so the user can't go back to the splash screen.
                                     navController.navigate("login") {
                                         popUpTo("splash") { inclusive = true }
                                     }
@@ -61,7 +57,6 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // --- The rest of your navigation graph remains the same ---
                         composable("login") {
                             LoginScreen(
                                 //authViewModel = authViewModel,
@@ -85,14 +80,13 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    // This state observer logic for redirection remains the same
                     when (val state = authState) {
                         is AuthViewModel.AuthState.Authenticated -> {
                             val destination = when (state.userType) {
                                 "patient" -> "patient_dashboard"
                                 "provider" -> "provider_dashboard"
                                 "admin" -> "admin_dashboard"
-                                else -> "login" // Default fallback
+                                else -> "login"
                             }
                             navController.navigate(destination) {
                                 popUpTo(navController.graph.id) { inclusive = true }
@@ -107,7 +101,6 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                         AuthViewModel.AuthState.Loading -> {
-                            // While loading, we stay on the splash/login screen
                         }
                     }
                 }

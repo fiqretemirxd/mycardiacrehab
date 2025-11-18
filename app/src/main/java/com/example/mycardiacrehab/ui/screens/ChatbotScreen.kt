@@ -28,8 +28,8 @@ import com.example.mycardiacrehab.viewmodel.ChatbotViewModel
 import kotlinx.coroutines.launch
 
 // Define your custom colors here, at the top of the file
-val ColorUserMessage = Color(0xFF03A9F4)  // Light Blue
-val ColorModelMessage = Color(0xFF4CAF50) // Green
+val ColorUserMessage = Color(0xFF03A9F4)
+val ColorModelMessage = Color(0xFF4CAF50)
 
 @Composable
 fun ChatbotScreen(
@@ -50,8 +50,6 @@ fun ChatbotScreen(
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
-        // AppHeader is currently commented out, as in your original code
-        // AppHeader()
 
         // MessageList takes up the remaining space
         MessageList(
@@ -90,11 +88,9 @@ fun MessageList(
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
 
-    // 🟢 FINAL FIX: Auto-scroll to the bottom when a new message appears
     LaunchedEffect(messages.size, isLoading) {
         if (messages.isNotEmpty() || isLoading) {
             coroutineScope.launch {
-                // Ensure index is valid: go to last index, or 0 if empty
                 val targetIndex = if (messages.isNotEmpty()) messages.size - 1 else 0
                 listState.animateScrollToItem(targetIndex)
             }
@@ -108,7 +104,6 @@ fun MessageList(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Note: Assuming R.drawable.baseline_question_answer_24 is a placeholder and should be an Icon or SVG
             Icon(
                 Icons.Default.QuestionAnswer, // Using default icon as placeholder
                 contentDescription = "Chatbot Icon",
