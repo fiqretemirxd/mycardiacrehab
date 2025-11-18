@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mycardiacrehab.model.User
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -55,7 +56,7 @@ class AdminViewModel : ViewModel() {
         try {
             val updates = hashMapOf(
                 "isActive" to true,
-                "active" to com.google.firebase.firestore.FieldValue.delete()
+                "active" to FieldValue.delete()
             )
             db.collection("users").document(user.userId)
                 .update(updates)

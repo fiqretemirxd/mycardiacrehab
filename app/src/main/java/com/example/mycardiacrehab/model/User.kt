@@ -2,6 +2,7 @@ package com.example.mycardiacrehab.model
 
 import com.google.firebase.firestore.ServerTimestamp
 import java.util.Date
+import com.google.firebase.firestore.Exclude
 
 data class User(
     var userId: String = "",
@@ -16,6 +17,7 @@ data class User(
     val emergencyContactName: String? = null,
     val emergencyContactNumber: String? = null,
 
+    @field:JvmField
     var isActive: Boolean = true,
 
     @ServerTimestamp
